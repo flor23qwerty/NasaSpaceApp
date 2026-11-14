@@ -436,9 +436,10 @@ function showTune() {
 /* Fase 2: escuchar */
 function showStory(already) {
   stopLoop(); setPhase(1); const it = cur;
-  body.innerHTML = '<p class="rx-voice" id="rx-voice" aria-live="polite"></p><div class="rx-prog" id="rx-prog"></div>' +
+  body.innerHTML = '<div class="rx-clip"></div><p class="rx-voice" id="rx-voice" aria-live="polite"></p><div class="rx-prog" id="rx-prog"></div>' +
     '<p class="rx-note"></p><div class="rx-actions"><button class="rx-btn ghost" id="rx-skip" type="button"></button><button class="rx-btn" id="rx-next" type="button" hidden></button></div>' +
     '<dl class="rx-facts" id="rx-facts" hidden></dl><p class="rx-src" id="rx-src" hidden></p>';
+  montarClip(body.querySelector('.rx-clip'), it);
   body.querySelector('.rx-note').textContent = tx('Narración imaginada a partir de datos reales de la misión.', 'Imagined narration based on real mission data.');
   $('#rx-next').textContent = already ? tx('Repetir el desafío', 'Replay the challenge') : tx('Ir al desafío', 'Go to the challenge');
   const v = $('#rx-voice'), skip = $('#rx-skip'), reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1030,6 +1031,166 @@ function gameLaser() {
     else { fb.className = 'rx-fb no'; fb.textContent = 'Pulsaste a los ' + comma(t) + ' s, y eso daría ' + fmt(d) + ' km. La luz tarda unos ' + comma(RT) + ' s en ir y volver. ' + (t < RT ? 'Espera un poco más.' : 'Pulsa un poco antes.'); beep(180, .2); $('#l-fire').focus(); }
   };
   $('#l-fire').focus();
+}
+
+/* ==========================================================================
+   CLIPS DE 4 SEGUNDOS — al empezar "Escuchar"
+   Cada máquina tiene una animación de lo que hizo y, si la NASA tiene video
+   real, un botón para verlo (carpeta videos/, recortes de 4 s de
+   images.nasa.gov, dominio público).
+   ========================================================================== */
+const VIDEOS = {
+  'site:Apolo 11': ['videos/apolo11.mp4', 'Descenso del Eagle filmado desde su ventana, 20 de julio de 1969'],
+  'site:Apolo 12': ['videos/apolo12.mp4', 'El ALSEP del Apolo 12 instalado en la Luna, noviembre de 1969'],
+  'site:Surveyor 3': ['videos/surveyor3.mp4', 'Surveyor 3 fotografiado por los astronautas del Apolo 12 en 1969'],
+  'site:Apolo 15': ['videos/apolo15.mp4', 'Película del rover lunar del Apolo 15 en marcha, 1971'],
+  'site:Perseverance e Ingenuity': ['videos/ingenuity.mp4', 'Primer vuelo de Ingenuity filmado por Perseverance, 19 de abril de 2021 (ampliado)'],
+  'site:Phoenix': ['videos/phoenix.mp4', 'Lanzamiento de Phoenix rumbo a Marte, 4 de agosto de 2007'],
+  'site:Opportunity': ['videos/opportunity.mp4', 'Capas de roca fotografiadas por Opportunity: se formaron en agua'],
+  'site:InSight': ['videos/insight.mp4', 'El sismómetro de InSight bajo su cúpula protectora, en Marte'],
+  'deep:dawn': ['videos/dawn.mp4', 'Lanzamiento de Dawn, 27 de septiembre de 2007']
+};
+const CLIP_TXT = { aterrizar: 'Así aterricé', conducir: 'Así recorría el suelo', cavar: 'Así cavaba', perforar: 'Así perforaba', sismos: 'Así escuchaba los temblores',
+  laser: 'Así respondo al láser', helicoptero: 'Así volé', transito: 'Así buscaba planetas', cinturon: 'Así crucé el cinturón de asteroides', iones: 'Así viajé con iones', impacto: 'Así llegué a la Luna' };
+const ease = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+function dibujaLander(c, x, y, col) {
+  c.strokeStyle = '#ece7da'; c.lineWidth = 2; c.beginPath();
+  c.moveTo(x - 12, y); c.lineTo(x - 24, y + 16); c.moveTo(x + 12, y); c.lineTo(x + 24, y + 16); c.stroke();
+  c.fillStyle = col || '#ece7da'; c.beginPath(); c.moveTo(x - 14, y); c.lineTo(x + 14, y); c.lineTo(x + 8, y - 18); c.lineTo(x - 8, y - 18); c.closePath(); c.fill();
+  c.fillStyle = '#80dcc6'; c.fillRect(x - 18, y - 24, 36, 3);
+}
+function dibujaRover(c, x, y, lrv) {
+  c.fillStyle = '#20263a'; [-14, 0, 14].forEach(d => { c.beginPath(); c.arc(x + d, y + 8, 6, 0, 7); c.fill(); });
+  c.fillStyle = lrv ? '#c9c3b6' : '#e9e4d8'; c.fillRect(x - 20, y - 6, 40, 12);
+  if (!lrv) { c.fillStyle = '#2b4a8a'; c.fillRect(x - 24, y - 12, 48, 5); c.strokeStyle = '#ece7da'; c.beginPath(); c.moveTo(x + 12, y - 12); c.lineTo(x + 14, y - 26); c.stroke(); c.fillRect(x + 10, y - 30, 8, 5); }
+  else { c.strokeStyle = '#ece7da'; c.beginPath(); c.moveTo(x - 4, y - 6); c.lineTo(x - 10, y - 22); c.stroke(); c.fillStyle = '#ece7da'; c.beginPath(); c.arc(x - 10, y - 26, 5, 0, 7); c.fill(); }
+}
+const ANIM = {
+  aterrizar(c, W, H, t, sp) {
+    const m = MUNDO[sp.w || 'luna'], sy = H - 50; cieloYSuelo(c, W, H, m, sy, 9);
+    const k = ease(t / 3.1), y = 30 + (sy - 46) * k, x = W / 2;
+    if (t < 3.1) { c.fillStyle = '#ffb84d'; c.beginPath(); c.moveTo(x - 7, y + 4); c.lineTo(x + 7, y + 4); c.lineTo(x, y + 24 + Math.random() * 14); c.fill(); }
+    if (t > 2.6) { const a = Math.max(0, 1 - (t - 2.6)); c.fillStyle = 'rgba(200,190,170,' + a * .6 + ')'; c.beginPath(); c.ellipse(x, sy, 40 + (t - 2.6) * 90, 8 + (t - 2.6) * 10, 0, 0, 7); c.fill(); }
+    dibujaLander(c, x, y + 4, sp.w === 'eros' ? '#d4a017' : null);
+  },
+  conducir(c, W, H, t, sp) {
+    const m = MUNDO[sp.w], sy = H - 70; cieloYSuelo(c, W, H, m, sy, 5);
+    const x = 60 + Math.min(t, 3) / 3 * (W - 220);
+    c.strokeStyle = 'rgba(0,0,0,.25)'; c.setLineDash([4, 4]); c.lineWidth = 3; c.beginPath(); c.moveTo(40, sy + 22); c.lineTo(x - 20, sy + 22); c.stroke(); c.setLineDash([]);
+    const ox = W - 130; c.fillStyle = { blanco: '#f1eee6', naranja: '#e8873a', amarillo: '#e2c94a', bayas: '#4a5068' }[sp.look] || '#c9c3b6';
+    c.beginPath(); c.ellipse(ox, sy + 20, 18, 8, 0, 0, 7); c.fill();
+    if (t > 3) { c.strokeStyle = '#ffb84d'; c.lineWidth = 3; c.beginPath(); c.arc(ox, sy + 18, 26, -Math.PI / 2, -Math.PI / 2 + (t - 3) * Math.PI * 2); c.stroke(); }
+    dibujaRover(c, x, sy + 6 - Math.abs(Math.sin(t * 9)) * 2, sp.lrv);
+  },
+  cavar(c, W, H, t, sp) {
+    const m = MUNDO[sp.w], sy = 130; cieloYSuelo(c, W, H, m, sy, 4);
+    c.fillStyle = m.suelo2; c.globalAlpha = .5; c.fillRect(0, sy + 50, W, 50); c.globalAlpha = 1;
+    const d = Math.min(1, t / 2.4) * 70, ax = W / 2;
+    c.fillStyle = '#1a1210'; c.fillRect(ax - 40, sy, 80, d);
+    if (sp.obj === 'hielo' && t > 2.4) { const a = Math.max(0, 1 - (t - 2.8) / 1.2); c.fillStyle = 'rgba(240,248,255,' + a + ')'; for (let i = 0; i < 5; i++) c.fillRect(ax - 30 + i * 13, sy + d - 9, 8, 8); c.fillStyle = '#ece7da'; c.font = 'bold 14px "IBM Plex Mono", monospace'; c.fillText('Sol ' + (20 + Math.floor(Math.max(0, t - 2.4) * 3)), 20, 30); }
+    const ay = sy - 40 + d + Math.sin(t * 6) * 4;
+    c.strokeStyle = '#ece7da'; c.lineWidth = 6; c.beginPath(); c.moveTo(90, 60); c.lineTo(ax - 50, 70); c.lineTo(ax, ay); c.stroke(); c.fillStyle = '#ffb84d'; c.fillRect(ax - 12, ay, 24, 12);
+    c.fillStyle = '#e9e4d8'; c.fillRect(40, 40, 70, 34);
+  },
+  perforar(c, W, H, t, sp) {
+    const m = MUNDO[sp.w], sy = 80; cieloYSuelo(c, W, H, m, sy, 6);
+    [[0, 40, m.suelo], [40, 90, m.suelo2], [90, 140, '#5a534c'], [140, 220, m.suelo2]].forEach(([a, b, col]) => { c.fillStyle = col; c.fillRect(0, sy + a, W, b - a); });
+    const d = Math.min(1, t / 3.4) * (H - sy - 20);
+    c.fillStyle = '#d6d0c4'; c.fillRect(W / 2 - 35, sy - 50, 70, 40); c.fillStyle = '#ece7da'; c.fillRect(W / 2 - 4, sy - 10, 8, 10 + d);
+    c.fillStyle = '#ffb84d'; c.beginPath(); c.moveTo(W / 2 - 4, sy + d); c.lineTo(W / 2 + 4, sy + d); c.lineTo(W / 2, sy + d + 8 + Math.sin(t * 40) * 2); c.fill();
+    c.fillStyle = '#ece7da'; c.font = '13px "IBM Plex Mono", monospace'; c.fillText(Math.round(Math.min(1, t / 3.4) * sp.meta) + ' cm', W / 2 + 20, sy + d);
+  },
+  sismos(c, W, H, t, sp) {
+    const m = MUNDO[sp.w], sy = H - 60, sh = t > 1.2 ? Math.sin(t * 50) * 3 * Math.exp(-(t - 1.2) / (sp.campana ? 2 : .7)) : 0;
+    c.save(); c.translate(0, sh); cieloYSuelo(c, W, H, m, sy, 3); c.restore();
+    c.fillStyle = '#d8d2c6'; c.beginPath(); c.arc(130, sy + sh, 26, Math.PI, 0); c.fill();
+    c.fillStyle = 'rgba(5,10,16,.85)'; c.fillRect(260, 30, W - 290, 150);
+    c.strokeStyle = '#ffb84d'; c.lineWidth = 2; c.beginPath();
+    for (let x = 0; x <= W - 290; x += 2) { const u = x / (W - 290) * 4 - (4 - t); let s = .04 * Math.sin(x * .9);
+      if (u > 1.2) { const v = u - 1.2; s += v < .5 ? .25 * Math.sin(v * 50) : Math.exp(-(v - .5) / (sp.campana ? 2 : .6)) * Math.sin(v * 30); }
+      const y = 105 - s * 60; x ? c.lineTo(260 + x, y) : c.moveTo(260 + x, y); }
+    c.stroke();
+  },
+  laser(c, W, H, t) {
+    c.fillStyle = '#04070d'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#3d6fd1'; c.beginPath(); c.arc(70, H / 2, 40, 0, 7); c.fill(); c.fillStyle = '#bdbab3'; c.beginPath(); c.arc(W - 70, H / 2, 22, 0, 7); c.fill();
+    const k = t / 2.56, x = k < .5 ? 110 + (W - 202 - 110) * k * 2 : (W - 92) - (W - 202) * (k - .5) * 2;
+    if (k <= 1) { c.fillStyle = k < .5 ? '#ff6b6b' : '#ffb84d'; c.beginPath(); c.arc(x, H / 2, 5, 0, 7); c.fill(); }
+    c.fillStyle = '#ece7da'; c.font = '14px "IBM Plex Mono", monospace'; c.fillText(num(Math.min(t, 2.56), 2) + ' s', W / 2 - 20, H - 30);
+  },
+  helicoptero(c, W, H, t) {
+    const sy = H - 50, alt = t < 1 ? 0 : t < 2.2 ? (t - 1) / 1.2 * 3 : t < 3.2 ? 3 : 3 - (t - 3.2) / .8 * 3;
+    const g = c.createLinearGradient(0, 0, 0, sy); g.addColorStop(0, '#3b2a2c'); g.addColorStop(1, '#c39466'); c.fillStyle = g; c.fillRect(0, 0, W, sy); c.fillStyle = '#b5623a'; c.fillRect(0, sy, W, H - sy);
+    const x = W / 2, y = sy - alt * 55;
+    if (alt < 1.5) { c.fillStyle = 'rgba(200,140,100,.3)'; c.beginPath(); c.ellipse(x, sy, 60, 8, 0, 0, 7); c.fill(); }
+    c.fillStyle = '#d4a017'; c.fillRect(x - 10, y - 16, 20, 14); c.strokeStyle = '#c9c3b6'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 10, y - 2); c.lineTo(x - 18, y + 12); c.moveTo(x + 10, y - 2); c.lineTo(x + 18, y + 12); c.stroke();
+    const w = 44 * Math.abs(Math.cos(t * 30)); c.fillStyle = 'rgba(236,231,218,.7)'; c.fillRect(x - w, y - 34, w * 2, 3); c.fillRect(x - (44 - w * .5), y - 27, (44 - w * .5) * 2, 3);
+    c.fillStyle = '#ece7da'; c.font = '13px "IBM Plex Mono", monospace'; c.fillText(num(alt) + ' m', x + 40, y - 10);
+  },
+  transito(c, W, H, t) {
+    c.fillStyle = '#04070d'; c.fillRect(0, 0, W, H);
+    const sx = 150, sy = H / 2, px = sx - 90 + t / 4 * 180, dentro = Math.abs(px - sx) < 60;
+    const g = c.createRadialGradient(sx, sy, 4, sx, sy, 60); g.addColorStop(0, '#fff3d0'); g.addColorStop(1, 'rgba(255,170,80,0)'); c.fillStyle = g; c.beginPath(); c.arc(sx, sy, 60, 0, 7); c.fill();
+    c.fillStyle = '#05070d'; c.beginPath(); c.arc(px, sy + 10, 9, 0, 7); c.fill();
+    c.strokeStyle = '#ffb84d'; c.lineWidth = 2; c.beginPath();
+    for (let x = 300; x < W - 20; x += 2) { const tt = (x - 300) / (W - 320) * 4; if (tt > t) break; const p2 = sx - 90 + tt / 4 * 180, y = 120 + (Math.abs(p2 - sx) < 60 ? 40 : 0) + Math.sin(x * 1.3) * 2; x === 300 ? c.moveTo(x, y) : c.lineTo(x, y); }
+    c.stroke(); c.fillStyle = '#a3acce'; c.font = '12px "IBM Plex Mono", monospace'; c.fillText('brillo de la estrella', 300, 100);
+  },
+  cinturon(c, W, H, t) {
+    c.fillStyle = '#04070d'; c.fillRect(0, 0, W, H); const r = rng(8);
+    for (let i = 0; i < 24; i++) { const x = (r() * W * 1.6 - t * 160) % (W + 40); c.fillStyle = '#8a7a6a'; c.beginPath(); c.arc(x < -20 ? x + W + 40 : x, r() * H, 4 + r() * 10, 0, 7); c.fill(); }
+    if (t > 2.4) { c.fillStyle = '#d8b48a'; c.beginPath(); c.arc(W + 120 - (t - 2.4) * 120, H / 2, 110, 0, 7); c.fill(); }
+    c.fillStyle = '#ece7da'; c.beginPath(); c.arc(140, H / 2 + Math.sin(t * 2) * 20, 9, 0, 7); c.fill();
+  },
+  iones(c, W, H, t) {
+    c.fillStyle = '#04070d'; c.fillRect(0, 0, W, H); const cx = W / 2, cy = H / 2;
+    c.fillStyle = '#ffb84d'; c.beginPath(); c.arc(cx, cy, 12, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(163,172,206,.3)'; [70, 125].forEach(r => { c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke(); });
+    const r = 70 + ease(t / 3.6) * 55, a = t * 1.6, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    c.fillStyle = '#9a948a'; c.beginPath(); c.arc(cx + Math.cos(t * .7 + 1.2) * 125, cy + Math.sin(t * .7 + 1.2) * 125, 8, 0, 7); c.fill();
+    c.fillStyle = 'rgba(120,170,255,.9)'; c.beginPath(); c.arc(x - Math.cos(a + 1.57) * 8, y - Math.sin(a + 1.57) * 8, 4, 0, 7); c.fill();
+    c.fillStyle = '#d4a017'; c.fillRect(x - 3, y - 3, 6, 6); c.fillStyle = '#2b4a8a'; c.fillRect(x - 11, y - 1, 22, 3);
+  },
+  impacto(c, W, H, t) {
+    c.fillStyle = '#04070d'; c.fillRect(0, 0, W, H); const cy = H / 2;
+    c.fillStyle = '#3d6fd1'; c.beginPath(); c.arc(80, cy, 34, 0, 7); c.fill();
+    const my = H + 30 - t / 3 * (H / 2 + 30); c.fillStyle = '#bdbab3'; c.beginPath(); c.arc(W - 100, Math.max(cy, my), 24, 0, 7); c.fill();
+    const px = 120 + Math.min(1, t / 3) * (W - 250); c.fillStyle = '#ffb84d'; c.beginPath(); c.arc(px, cy, 4, 0, 7); c.fill();
+    if (t > 3) { c.fillStyle = 'rgba(255,240,200,' + (1 - (t - 3)) + ')'; c.beginPath(); c.arc(W - 122, cy, 6 + (t - 3) * 30, 0, 7); c.fill(); }
+  }
+};
+function montarClip(cont, echo) {
+  const j = juegoDe(echo) || { t: 'aterrizar', w: 'luna' }, vid = VIDEOS[echo.id], DUR = 4;
+  cont.innerHTML = '<div class="rx-clip-view"><canvas width="720" height="300" aria-hidden="true"></canvas><video muted playsinline preload="metadata" hidden></video>' +
+    '<span class="rx-clip-tag"></span></div><div class="rx-clip-bar"><span class="rx-clip-cap"></span><span class="rx-clip-btns"></span></div>';
+  const cv = cont.querySelector('canvas'), c = cv.getContext('2d'), v = cont.querySelector('video'), tag = cont.querySelector('.rx-clip-tag'), cap = cont.querySelector('.rx-clip-cap'), btns = cont.querySelector('.rx-clip-btns');
+  let modo = vid ? 'video' : 'anim', t0 = performance.now(), raf = null;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const draw = now => {
+    const t = Math.min(DUR, (now - t0) / 1000);
+    ANIM[j.t](c, 720, 300, reduce ? DUR : t, j);
+    c.fillStyle = 'rgba(10,15,31,.75)'; c.fillRect(0, 0, 720, 30); c.fillStyle = '#ece7da'; c.font = 'bold 15px "Atkinson Hyperlegible", sans-serif';
+    c.fillText((CLIP_TXT[j.t] || '') + ' · ' + echo.name, 12, 21);
+    if (t < DUR && !reduce) raf = requestAnimationFrame(draw);
+  };
+  function mostrar() {
+    cancelAnimationFrame(raf); btns.innerHTML = '';
+    const b = (txt, fn) => { const e = document.createElement('button'); e.type = 'button'; e.className = 'rx-btn ghost small'; e.textContent = txt; e.onclick = fn; btns.appendChild(e); };
+    if (modo === 'video') {
+      cv.hidden = true; v.hidden = false;
+      if (!v.firstChild) { [['webm', 'video/webm'], ['mp4', 'video/mp4']].forEach(([ext, type]) => { const so = document.createElement('source'); so.src = vid[0].replace('.mp4', '.' + ext); so.type = type; v.appendChild(so); }); v.load(); } v.currentTime = 0; v.play().catch(() => {});
+      tag.textContent = 'VIDEO REAL · NASA'; cap.textContent = vid[1] + '.';
+      b('↻ Repetir', () => { v.currentTime = 0; v.play().catch(() => {}); }); b('Ver animación', () => { modo = 'anim'; mostrar(); });
+    } else {
+      v.pause(); v.hidden = true; cv.hidden = false; t0 = performance.now(); raf = requestAnimationFrame(draw);
+      tag.textContent = 'ANIMACIÓN'; cap.textContent = vid ? 'Recreación de lo que hizo esta máquina.' : 'Recreación de lo que hizo esta máquina. No existe video real de esta misión en la biblioteca de la NASA.';
+      b('↻ Repetir', () => { t0 = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
+      if (vid) b('Ver video real', () => { modo = 'video'; mostrar(); });
+    }
+  }
+  v.addEventListener('error', () => { if (modo === 'video') { modo = 'anim'; mostrar(); } }, true);
+  cleanup.push(() => { cancelAnimationFrame(raf); v.pause(); });
+  mostrar();
 }
 
 /* ---------- 6. CIELO LIMPIO ----------

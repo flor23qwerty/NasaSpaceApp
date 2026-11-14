@@ -43,6 +43,13 @@ En pantallas táctiles aparecen botones automáticamente.
 | Motor de iones | Dawn |
 | Impacto | Luna 2 |
 
+## Clips de 4 segundos
+
+Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
+
+- **Animación** para las 47 máquinas, dibujada en el propio juego.
+- **Video real de la NASA** en 9 de ellas (Apolo 11, Apolo 12, Surveyor 3, Apolo 15, Ingenuity, Phoenix, Opportunity, InSight y Dawn). Son recortes de 4 s de [images.nasa.gov](https://images.nasa.gov) (dominio público), en la carpeta `videos/`, en MP4 y WebM. En esas máquinas se puede cambiar entre la animación y el video.
+
 ## Archivos
 
 | Archivo | Qué contiene |
@@ -51,6 +58,7 @@ En pantallas táctiles aparecen botones automáticamente.
 | `ecos.js` | La capa "Ecos del Silencio": receptor, historias, minijuegos, archivo, cielo limpio y "¿dónde está mi nave?". Comentado en español. |
 | `ecos.css` | Estilo visual de todo el juego. |
 | `musica.mp3` | Música de fondo. |
+| `videos/` | Recortes de 4 s de videos de la NASA (MP4 y WebM). |
 
 ## Fuentes de datos
 

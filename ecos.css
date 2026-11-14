@@ -169,3 +169,12 @@ body.mobile-mode #e-ship{top:auto;bottom:calc(270px + env(safe-area-inset-bottom
 .rx-btn.hold.on{background:#ffd08a;box-shadow:0 0 0 3px rgba(255,184,77,.35)}
 .rx-btn.ghost.hold.on{background:rgba(255,184,77,.25);color:var(--e-ink)}
 .rx-actions .rx-btn.ghost[aria-label]{min-width:52px;font-size:1.15rem}
+/* Clips de 4 s (animación o video real de la NASA) */
+.rx-clip{display:flex;flex-direction:column;gap:6px}
+.rx-clip-view{position:relative;border:1px solid var(--e-line);border-radius:6px;overflow:hidden;background:#04070d;aspect-ratio:12/5;max-width:100%}
+.rx-clip-view canvas,.rx-clip-view video{display:block;width:100%;height:100%;object-fit:cover}
+.rx-clip-tag{position:absolute;right:8px;bottom:8px;font:600 11px var(--e-mono);letter-spacing:.1em;color:#1b1205;background:var(--e-amber);padding:3px 7px;border-radius:4px}
+.rx-clip-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.rx-clip-cap{font-size:13px;color:var(--e-muted);min-width:0;flex:1 1 220px}
+.rx-clip-btns{display:flex;gap:6px}
+.rx-btn.small{min-height:34px;padding:6px 12px;font-size:.85rem}
