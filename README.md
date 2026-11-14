@@ -4,6 +4,10 @@ Juego educativo para el desafío **"NASA's Discarded Equipment Storytelling"** d
 
 Desde 1959 hemos dejado máquinas en la Luna, en Marte y en el espacio profundo. En este juego vuelas en 3D por el sistema solar, aterrizas junto a esas máquinas, **sintonizas su eco**, escuchas su historia contada por ellas mismas y superas un **minijuego que muestra lo que hicieron** para guardarlas en el archivo.
 
+## La historia
+
+Todo empieza de noche en el **Observatorio de Characato** (Arequipa, Perú), en el cerro San Francisco. Allí funciona de verdad la estación láser TLRS-3 de la NASA, operada por la UNSA. Una computadora vieja se enciende sola: es una terminal verde que detectó 47 señales de máquinas abandonadas. El jugador escribe su nombre, explora con comandos (`ayuda`, `escanear`, `observatorio`, `señal`, `nave`, `eve`, `aceptar`) y, al aceptar la misión, se teletransporta a la nave ECO-1, donde EVE lo recibe por su nombre. La señal y el teletransporte son ficción; los datos de la estación y de las misiones son reales.
+
 ## Cómo jugar
 
 1. Abre `index.html` en el navegador (necesita internet para cargar la librería 3D y las letras).
@@ -56,6 +60,7 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 |---|---|
 | `index.html` | El mundo 3D (Three.js): nave, planetas, aterrizaje, astronauta, misiones en la Luna y Marte, EVE y controles táctiles. |
 | `ecos.js` | La capa "Ecos del Silencio": receptor, historias, minijuegos, archivo, cielo limpio y "¿dónde está mi nave?". Comentado en español. |
+| `intro.js` | La intro: Characato de noche, la terminal con comandos y el teletransporte. |
 | `ecos.css` | Estilo visual de todo el juego. |
 | `musica.mp3` | Música de fondo. |
 | `videos/` | Recortes de 4 s de videos de la NASA (MP4 y WebM). |
