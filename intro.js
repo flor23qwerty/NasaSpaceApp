@@ -6,7 +6,7 @@
      2. Dentro del observatorio: una pantalla se enciende sola.
      3. Terminal verde: el jugador escribe su nombre y explora con comandos
         (ayuda, escanear, observatorio, señal, nave, eve, limpiar, aceptar).
-     4. Teletransporte a la nave ECO-1 → empieza el juego 3D.
+     4. Teletransporte a la plataforma de la nave ECO-1, en la Tierra → empieza el juego 3D.
    Datos reales usados: la estación láser TLRS-3 de la NASA opera en el
    Observatorio de Characato (UNSA), cerro San Francisco, a ~2.448 m; allí se
    miden distancias a satélites con láser desde 1970.
@@ -142,10 +142,10 @@ const CMD = {
   escanear: async () => { const k = contar(); await decir(['Escaneando…', '[██████████████████] 100 %', 'Luna ............ ' + k.luna + ' señales', 'Marte ........... ' + k.marte + ' señales', 'Espacio profundo  ' + k.lejos + ' señales', 'TOTAL: ' + k.total + ' máquinas abandonadas. Ninguna responde.', 'Son sondas, rovers y módulos que la humanidad dejó atrás desde 1959.']); },
   observatorio: () => decir(['OBSERVATORIO DE CHARACATO · Universidad Nacional de San Agustín', 'Cerro San Francisco, Characato, Arequipa · ~2.448 m de altitud', 'Aloja la estación láser TLRS-3 de la NASA.', 'Mide la distancia a satélites disparando pulsos de láser y cronometrando', 'cuánto tarda la luz en volver. Aquí se hace desde 1970.', 'Es la misma idea con la que se mide la distancia a la Luna', 'usando los espejos que dejó el Apolo 15. (Lo probarás en el juego.)']),
   'señal': () => decir(['Sintonizando la señal más lejana…', '…▒▒░ soy Pioneer 10 ░▒▒…', '…▒ crucé el cinturón de asteroides en 1972… ▒░…', '…░ mi última señal llegó en 2003… sigo viajando hacia Aldebarán ▒…', '[señal perdida]', 'Hay 46 señales más esperando a alguien que las escuche.'], 'eco'),
-  nave: () => decir(['NAVE ECO-1 · en órbita alta sobre la Luna', 'Tripulación: 1 operador + asistente EVE', 'Equipo: antena de espacio profundo, receptor de ecos, módulo de aterrizaje', 'Estado: esperando operador…']),
+  nave: () => decir(['NAVE ECO-1 · posada en su plataforma de lanzamiento, en la Tierra', 'Tripulación: 1 operador + asistente EVE', 'Equipo: antena de espacio profundo, receptor de ecos, módulo de aterrizaje', 'Estado: esperando operador…']),
   eve: () => decir(['EVE · asistente cósmica de la ECO-1', '"Hola, ' + nombre + '. Yo te daré datos y te guiaré hasta cada máquina.', ' Tú solo tienes que escucharlas."']),
   limpiar: () => { out.innerHTML = ''; return Promise.resolve(); },
-  aceptar: async () => { fase = 'fin'; input.disabled = true; chips.innerHTML = ''; await decir(['Operador ' + nombre.toUpperCase() + ': misión aceptada.', 'Destino: nave ECO-1.', 'Iniciando teletransporte…']);
+  aceptar: async () => { fase = 'fin'; input.disabled = true; chips.innerHTML = ''; await decir(['Operador ' + nombre.toUpperCase() + ': misión aceptada.', 'Destino: plataforma de la nave ECO-1.', 'Iniciando teletransporte…']);
     const bar = linea('', 'ok'); for (let p = 0; p <= 100; p += 5) { bar.textContent = '[' + '█'.repeat(p / 5) + '░'.repeat(20 - p / 5) + '] ' + p + ' %'; await new Promise(r => setTimeout(r, reduce ? 0 : 60)); }
     for (const n of ['3', '2', '1']) { linea(n + '…', 'ok'); await new Promise(r => setTimeout(r, reduce ? 0 : 450)); }
     teletransporte(); }
@@ -189,8 +189,8 @@ function teletransporte() {
 function terminar() {
   const n = nombre || nombreGuardado || 'operador';
   window.__nombreOperador = n;
-  i18n.es.eveWelcome = '¡Te damos la bienvenida a bordo de la ECO-1, ' + n + '! Abre el archivo (arriba a la derecha) y elige una máquina: aterrizaremos a su lado. Pulsa E para sintonizar su eco.';
-  i18n.en.eveWelcome = 'Welcome aboard the ECO-1, ' + n + '! Open the archive (top right) and pick a machine: we will land next to it. Press E to tune in to its echo.';
+  i18n.es.eveWelcome = '¡Hola, ' + n + '! El teletransporte te dejó en la Tierra, junto a la ECO-1. Camina hasta la nave (W A S D) y pulsa F para subir. Luego abre el archivo (arriba a la derecha) y elige una máquina: aterrizaremos a su lado.';
+  i18n.en.eveWelcome = 'Hi, ' + n + '! The teleporter dropped you on Earth, next to the ECO-1. Walk to the ship (W A S D) and press F to board. Then open the archive (top right) and pick a machine: we will land next to it.';
   if (alFinal) { const f = alFinal; alFinal = null; f(); }
   ov.classList.add('fuera');
   setTimeout(() => { ov.hidden = true; ov.classList.remove('fuera'); cancelAnimationFrame(raf); }, reduce ? 0 : 900);

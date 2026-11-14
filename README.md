@@ -6,12 +6,12 @@ Desde 1959 hemos dejado máquinas en la Luna, en Marte y en el espacio profundo.
 
 ## La historia
 
-Todo empieza de noche en el **Observatorio de Characato** (Arequipa, Perú), en el cerro San Francisco. Allí funciona de verdad la estación láser TLRS-3 de la NASA, operada por la UNSA. Una computadora vieja se enciende sola: es una terminal verde que detectó 47 señales de máquinas abandonadas. El jugador escribe su nombre, explora con comandos (`ayuda`, `escanear`, `observatorio`, `señal`, `nave`, `eve`, `aceptar`) y, al aceptar la misión, se teletransporta a la nave ECO-1, donde EVE lo recibe por su nombre. La señal y el teletransporte son ficción; los datos de la estación y de las misiones son reales.
+Todo empieza de noche en el **Observatorio de Characato** (Arequipa, Perú), en el cerro San Francisco. Allí funciona de verdad la estación láser TLRS-3 de la NASA, operada por la UNSA. Una computadora vieja se enciende sola: es una terminal verde que detectó 47 señales de máquinas abandonadas. El jugador escribe su nombre, explora con comandos (`ayuda`, `escanear`, `observatorio`, `señal`, `nave`, `eve`, `aceptar`) y, al aceptar la misión, se teletransporta a la Tierra, junto a la plataforma de la nave ECO-1. EVE lo recibe por su nombre, el jugador camina hasta la nave y sube con **F**. La señal y el teletransporte son ficción; los datos de la estación y de las misiones son reales.
 
 ## Cómo jugar
 
 1. Abre `index.html` en el navegador (necesita internet para cargar la librería 3D y las letras).
-2. Pulsa **Empezar el vuelo**.
+2. Pulsa **Empezar el vuelo**, juega la intro y camina hasta la nave; pulsa **F** para subir.
 3. Abre el **archivo** (el contador de arriba a la derecha) y toca una misión: la nave aterriza a su lado.
 4. Pulsa **E** (o 💬 en el celular) para abrir el receptor:
    - **Sintonizar:** mueve el dial hasta limpiar la señal.
@@ -24,11 +24,15 @@ Todo empieza de noche en el **Observatorio de Characato** (Arequipa, Perú), en 
 | W A S D / flechas | Volar o caminar |
 | Q / E | Bajar / subir (volando) |
 | Espacio | Turbo |
-| F | Aterrizar / despegar |
+| F | Subir a la nave (junto a ella) / aterrizar |
 | E | Hablar con la máquina cercana (caminando) |
 | Ratón | Arrastrar para girar la cámara |
 
 En pantallas táctiles aparecen botones automáticamente.
+
+## Escala del sistema solar
+
+Los tamaños y distancias están a escala semi-real comprimida: el Sol es mucho más grande que los planetas, Júpiter y Saturno son gigantes y el cinturón de asteroides queda entre Marte y Júpiter. Las distancias están muy reducidas para que se pueda volar; por eso la nave acelera sola en el espacio abierto y frena cerca de los planetas.
 
 ## Minijuegos
 

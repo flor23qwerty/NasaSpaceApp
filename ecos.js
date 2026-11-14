@@ -28,7 +28,7 @@ Object.assign(i18n.es, {
   startBtn: 'Empezar el vuelo',
   hudTitle: 'CONTROLES DE VUELO',
   eveChestTitle: 'Toca la pantalla de EVE para recibir un dato',
-  eveWelcome: '¡Hola! Soy EVE. Abre el archivo (arriba a la derecha) o vuela hasta la Luna o Marte. Aterriza con F junto a una máquina y pulsa E para sintonizar su eco.',
+  eveWelcome: '¡Hola! Soy EVE. Estamos en la Tierra: camina hasta la nave (W A S D) y pulsa F para subir. Luego abre el archivo (arriba a la derecha) o vuela hasta la Luna o Marte. Aterriza con F junto a una máquina y pulsa E para sintonizar su eco.',
   eveCalm: 'Aquí tienes un dato espacial: '
 });
 Object.assign(i18n.en, {
@@ -38,7 +38,7 @@ Object.assign(i18n.en, {
   startBtn: 'Start flying',
   hudTitle: 'FLIGHT CONTROLS',
   eveChestTitle: "Tap EVE's screen for a space fact",
-  eveWelcome: "Hi! I'm EVE. Open the archive (top right) or fly to the Moon or Mars. Land with F next to a machine and press E to tune in to its echo.",
+  eveWelcome: "Hi! I'm EVE. We are on Earth: walk to the ship (W A S D) and press F to board. Then open the archive (top right) or fly to the Moon or Mars. Land with F next to a machine and press E to tune in to its echo.",
   eveCalm: 'Here is a space fact: '
 });
 // Precisión: la "lluvia de diamantes" es una hipótesis, no algo observado.
@@ -1237,7 +1237,7 @@ function vigilarNave() {
       const d = Math.round(_s.distanceTo(_a2));
       beam.material.opacity = 0.3 + 0.15 * Math.sin(performance.now() / 300);
       chipTxt.textContent = d < 12 ? tx('Estás junto a tu nave', 'You are next to your ship') : tx('Tu nave está a ' + d + ' pasos', 'Your ship is ' + d + ' steps away');
-      chipGo.textContent = d < 12 ? tx('Despegar', 'Take off') : tx('Volver a la nave', 'Back to the ship');
+      chipGo.textContent = d < 12 ? tx('Subir a la nave', 'Board') : tx('Volver a la nave', 'Back to the ship');
       // flecha: hacia dónde queda la nave en la pantalla
       const p = _s.clone().project(J.camera); let dx = p.x, dy = p.y;
       if (p.z > 1) { dx = -dx; dy = -dy; }
