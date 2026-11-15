@@ -251,11 +251,14 @@ function echoDeep(d) { return Object.assign({}, d, { id: 'deep:' + d.id }); }
 /* Medidor (arriba a la derecha) */
 const meter = document.createElement('button');
 meter.id = 'e-meter'; meter.type = 'button';
-meter.innerHTML = '<span class="lbl"></span><span class="num"></span><span class="bar"><i></i></span>';
+meter.innerHTML = '<span class="lbl"></span><span class="num"></span><span class="bar"><i></i></span><span class="pista"></span>';
 document.body.appendChild(meter);
-meter.onclick = () => { window.toggleSitesPanel(); };
+let archivoAbierto = false;
+try { archivoAbierto = localStorage.getItem('ecos3d-archivo-visto') === 'si'; } catch (e) {}
+meter.onclick = () => { window.toggleSitesPanel(); if (!archivoAbierto) { archivoAbierto = true; try { localStorage.setItem('ecos3d-archivo-visto', 'si'); } catch (e) {} } meter.classList.remove('guia'); document.body.classList.remove('guia-archivo'); renderMeter(); };
 function renderMeter() {
   meter.querySelector('.lbl').textContent = tx('Ecos archivados', 'Echoes archived');
+  meter.querySelector('.pista').textContent = archivoAbierto ? '' : tx('Elegir una máquina ▸', 'Choose a machine ▸');
   meter.querySelector('.num').innerHTML = '<span>' + archived.size + '</span> / ' + TOTAL;
   meter.querySelector('.bar i').style.width = (archived.size / TOTAL * 100) + '%';
   meter.setAttribute('aria-label', tx('Abrir el archivo: ', 'Open the archive: ') + archived.size + ' / ' + TOTAL);
@@ -1387,6 +1390,33 @@ function aplicarCielo() { if (window.__setCieloLimpio) window.__setCieloLimpio(c
 cieloItem.onclick = () => { cieloLimpio = !cieloLimpio; try { localStorage.setItem('ecos3d-cielo', cieloLimpio ? 'si' : 'no'); } catch (e) {} aplicarCielo(); document.getElementById('menu-dropdown').classList.remove('active'); };
 cieloItem.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cieloItem.onclick(); } };
 
+/* ---------- Menú: iconos de línea neutros en lugar de emojis ---------- */
+const ICONOS = {
+  'earth-menu-item': "<circle cx='12' cy='12' r='9'/><path d='M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18'/>",
+  'sites-menu-item': "<path d='M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/>",
+  'pads-menu-item': "<circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='4'/><path d='M12 3v3M12 18v3M3 12h3M18 12h3'/>",
+  'comments-menu-item': "<path d='M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z'/>",
+  'e-cielo-item': "<path d='M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z'/>",
+  'e-lsp-item': "<path d='M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10V4.5a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 5 17.6L3.6 14a1.5 1.5 0 0 1 2.6-1.4L8 15'/>",
+  'music-menu-item': "<path d='M11 5 6 9H3v6h3l5 4z'/><path d='M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13'/>",
+  'eve-menu-item': "<rect x='4' y='8' width='16' height='12' rx='3'/><path d='M12 4v4'/><circle cx='9' cy='14' r='1.2'/><circle cx='15' cy='14' r='1.2'/>",
+  'hud-menu-item': "<rect x='3' y='6' width='18' height='12' rx='2'/><path d='M7 10h.01M11 10h.01M15 10h.01M7 14h10'/>",
+  'mobile-menu-item': "<rect x='7' y='2.5' width='10' height='19' rx='2'/><path d='M11 18h2'/>"
+};
+const QUITAR_EMOJI = /^[\s←-⇿⌀-➿⬀-⯿️‍\u{1F000}-\u{1FAFF}]+/u;
+function iconosMenu() {
+  const menu = document.getElementById('menu-dropdown'); if (!menu) return;
+  const sitios = [...menu.children].find(el => /toggleSitesPanel/.test(el.getAttribute('onclick') || '')); if (sitios && !sitios.id) sitios.id = 'sites-menu-item';
+  [...menu.querySelectorAll('.menu-item')].forEach(el => {
+    const ic = ICONOS[el.id];
+    if (ic && !el.dataset.ic) { el.dataset.ic = '1'; el.style.setProperty('--ic', 'url("data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>" + ic + '</svg>') + '")'); }
+    const t = el.textContent, limpio = t.replace(QUITAR_EMOJI, '');
+    if (limpio !== t) el.textContent = limpio;   // el texto puede cambiar con el idioma: se limpia otra vez
+  });
+}
+iconosMenu();
+new MutationObserver(iconosMenu).observe(document.getElementById('menu-dropdown'), { childList: true, subtree: true, characterData: true });
+
 /* ---------- 7. ¿DÓNDE ESTÁ MI NAVE? ----------
    Mientras caminas: un rayo de luz sale de la nave, una flecha te dice hacia dónde
    está y a cuántos pasos, y un botón te devuelve a ella para despegar. */
@@ -1406,8 +1436,23 @@ function crearFaro() {
   beamTop.scale.set(14, 3.5, 1); beamTop.position.y = 92; beamTop.visible = false; J.ship.add(beamTop);
 }
 const _s = new THREE.Vector3(), _a2 = new THREE.Vector3();
+/* Guía para quien empieza: al subir a la nave por primera vez, EVE dice qué hacer
+   y el archivo (arriba a la derecha) se ilumina hasta que lo abras. */
+let antesCaminando = null, guiaDada = false, guiaTimer = null;
+function guiarPrimerosPasos(J) {
+  const caminando = !!J.walk.active;
+  if (antesCaminando === true && !caminando && !guiaDada && archived.size === 0) {
+    guiaDada = true;
+    triggerEveMessage(tx('🚀 ¡Ya estás en la nave! Ahora toca el ARCHIVO (arriba a la derecha) y elige una máquina: te llevo volando hasta ella.',
+      '🚀 You are in the ship! Now tap the ARCHIVE (top right) and choose a machine: I will fly you right to it.'));
+    meter.classList.add('guia'); document.body.classList.add('guia-archivo');   // mientras tanto, se oculta la pista de abajo para no dar dos órdenes a la vez
+    guiaTimer = setTimeout(() => { if (meter.classList.contains('guia')) triggerEveMessage(tx('👆 Toca el contador de arriba a la derecha para elegir una máquina.', '👆 Tap the counter at the top right to choose a machine.')); }, 25000);
+  }
+  antesCaminando = caminando;
+}
 function vigilarNave() {
   const J = window.__juego;
+  if (J) guiarPrimerosPasos(J);
   if (J && beam) {
     const caminando = !!J.walk.active;
     beam.visible = beamTop.visible = caminando;

@@ -318,3 +318,25 @@ body.mobile-mode #casco{right:10px;bottom:auto;top:112px}
 #emotes button:hover,#emotes button:focus-visible{background:rgba(255,184,77,.15);border-color:rgba(255,184,77,.5);outline:none}
 #emotes button:nth-last-child(-n+2){font:700 .9rem var(--e-body)}
 body.mobile-mode #emotes{bottom:calc(360px + env(safe-area-inset-bottom,0px))}
+
+/* ---------- EVE arriba al centro (se ve mejor) ---------- */
+.eve-container{left:50%!important;top:16px!important;bottom:auto!important;transform:translateX(-50%)!important;align-items:center!important;flex-direction:row;max-width:min(560px,calc(100% - 460px))!important;cursor:default!important}
+.eve-avatar{width:46px!important}
+.eve-bubble{transform:none!important}
+body.mobile-mode .eve-container{top:64px!important;left:50%!important;transform:translateX(-50%)!important;max-width:calc(100% - 20px)!important;width:max-content}
+@media (max-width:900px){.eve-container{max-width:calc(100% - 300px)!important}}
+/* El aviso "Tu nave está a… / Volver a la nave" va abajo, sobre la pista */
+#e-ship{top:auto!important;bottom:118px}
+/* Archivo: pista para quien empieza, y brillo cuando EVE lo señala */
+#e-meter .pista{font:600 .72rem var(--e-body);color:var(--e-amber)}
+#e-meter .pista:empty{display:none}
+#e-meter.guia{border-color:var(--e-amber);animation:guiaPulso 1.6s ease-in-out infinite}
+@keyframes guiaPulso{50%{box-shadow:0 0 0 7px rgba(255,184,77,.22)}}
+@media (prefers-reduced-motion:reduce){#e-meter.guia{animation:none;box-shadow:0 0 0 3px rgba(255,184,77,.4)}}
+/* Menú con iconos de línea */
+.menu-item{display:flex!important;align-items:center;gap:10px}
+.menu-item[data-ic]::before{content:"";flex:none;width:18px;height:18px;background:currentColor;opacity:.85;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+body.guia-archivo #walk-hint{display:none!important}
+body.mobile-mode .eve-container{top:104px!important}
+body.mobile-mode #casco{top:auto;bottom:calc(300px + env(safe-area-inset-bottom,0px))}
+body.mobile-mode .speedometer{display:none!important}   /* en celular: menos cosas en pantalla */
