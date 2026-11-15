@@ -163,7 +163,7 @@ body.mobile-mode .eve-bubble{font-size:.8rem;padding:8px 12px}
 #e-ship .arrow{display:inline-block;color:var(--e-amber);font-size:1.1rem;line-height:1}
 #e-ship .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #e-ship .go{flex:none;font:700 .85rem var(--e-body);background:var(--e-amber);color:#1b1205;border:0;border-radius:6px;padding:8px 12px;cursor:pointer}
-body.mobile-mode #e-ship{top:auto;bottom:calc(270px + env(safe-area-inset-bottom,0px));font-size:.82rem}
+body.mobile-mode #e-ship{top:auto;bottom:calc(310px + env(safe-area-inset-bottom,0px));font-size:.82rem}
 /* Minijuegos: botones que se mantienen pulsados */
 .rx-btn.hold{user-select:none;-webkit-user-select:none;touch-action:none;-webkit-touch-callout:none}
 .rx-btn.hold.on{background:#ffd08a;box-shadow:0 0 0 3px rgba(255,184,77,.35)}
@@ -264,3 +264,20 @@ ul.rx-facil .ic{flex:none;width:48px;height:48px;display:grid;place-items:center
 .rx-sonido audio{width:100%;height:36px}
 .rx-sonido .tr{font-size:13px;color:var(--e-muted);font-style:italic}
 .rx-fotos video{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#05080f;border:1px solid var(--e-line)}
+
+/* ---------- EVE discreta: más pequeña, sin brillo, burbuja sobria ---------- */
+.eve-container{gap:8px;max-width:300px;bottom:24px!important;align-items:flex-end!important}
+body.mobile-mode .eve-container{align-items:flex-start!important}
+.eve-avatar{width:62px!important;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))!important;animation:eveFlotaSuave 5s ease-in-out infinite!important;opacity:.92}
+.eve-avatar.angry{filter:drop-shadow(0 3px 6px rgba(0,0,0,.4)) drop-shadow(0 0 8px rgba(255,90,90,.6))!important;animation:eveFlotaSuave 5s ease-in-out infinite,eveShake .35s linear infinite!important}
+@keyframes eveFlotaSuave{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.eve-bubble{box-shadow:0 6px 18px rgba(0,0,0,.3)!important;font-size:.8rem!important;padding:9px 12px!important;border-radius:10px!important;backdrop-filter:none!important}
+.eve-bubble strong{font-size:.72rem!important;letter-spacing:.1em!important;color:var(--e-muted)!important}
+.eve-bubble:not(.active){pointer-events:none}
+body.mobile-mode .eve-avatar{width:48px!important}
+@media (prefers-reduced-motion:reduce){.eve-avatar{animation:none!important}}
+
+/* Botón "?": se ilumina suavemente al empezar para que se sepa dónde están los controles */
+#e-help.nuevo{border-color:var(--e-amber);animation:ayudaPulso 1.6s ease-in-out 4}
+@keyframes ayudaPulso{50%{box-shadow:0 0 0 6px rgba(255,184,77,.25)}}
+@media (prefers-reduced-motion:reduce){#e-help.nuevo{animation:none}}

@@ -999,7 +999,7 @@
         triggerEveMessage(facts[factIndex]);
         factIndex = (factIndex + 1) % facts.length;
       }
-    }, 20000);
+    }, 60000);   // un dato cada minuto (antes 20 s: EVE hablaba demasiado)
 
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof THREE === 'undefined') {

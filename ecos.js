@@ -316,7 +316,16 @@ document.body.appendChild(help);
 const _init = window.initExperience;
 window.initExperience = function () {
   _init();
-  setTimeout(() => { if (isHudVisible && overlay.hidden) window.toggleHUD(); }, 14000);
+  // Los controles empiezan ocultos: se ven con el botón "?" (que se ilumina un momento al empezar)
+  if (isHudVisible) window.toggleHUD();
+  help.classList.add('nuevo'); setTimeout(() => help.classList.remove('nuevo'), 9000);
+};
+/* EVE más discreta: su burbuja se esconde sola unos segundos después de hablar */
+const _eve = window.triggerEveMessage; let eveTimer = null;
+window.triggerEveMessage = function (msg) {
+  _eve(msg);
+  clearTimeout(eveTimer);
+  eveTimer = setTimeout(() => { const b = document.querySelector('.eve-bubble'); if (b) b.classList.remove('active'); }, 6000 + Math.min(8000, String(msg).length * 45));
 };
 // Etiqueta pequeña sobre el título de inicio
 const eb = document.createElement('div'); eb.id = 'e-eyebrow'; eb.className = 'e-eyebrow';
