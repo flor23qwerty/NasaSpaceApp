@@ -312,8 +312,9 @@
     <p id="hud-ws"><strong>W / ↑</strong> avanzar · <strong>S / ↓</strong> retroceder</p>
     <p id="hud-ad"><strong>A / ←</strong> izquierda · <strong>D / →</strong> derecha</p>
     <p id="hud-qe"><strong>Q</strong> bajar altura (Y) · <strong>E</strong> subir altura (Y)</p>
-    <p id="hud-space"><strong>ESPACIO</strong> activar turbo 🚀</p>
+    <p id="hud-space"><strong>ESPACIO</strong> turbo (volando) · saltar (caminando) 🚀</p>
     <p id="hud-park" style="color:#00f0ff; margin-top:5px;"><strong>TECLA F</strong>: Subir a la nave (junto a ella) · Aterrizar / Despegar (cerca de un planeta) 🧑‍🚀</p>
+    <p><strong>TECLA T</strong> o clic en tu astronauta: emotes 💀🔥✨</p>
   </div>
 
   <div class="coords">
@@ -402,7 +403,7 @@
         hudWS: "<strong>W / ↑</strong> avanzar · <strong>S / ↓</strong> retroceder",
         hudAD: "<strong>A / ←</strong> izquierda · <strong>D / →</strong> derecha",
         hudQE: "<strong>Q</strong> bajar altura (Y) · <strong>E</strong> subir altura (Y)",
-        hudSpace: "<strong>ESPACIO</strong> activar turbo 🚀",
+        hudSpace: "<strong>ESPACIO</strong> turbo (volando) · saltar (caminando) 🚀",
         hudPark: "<strong>TECLA F</strong>: Subir a la nave (junto a ella) · Aterrizar / Despegar (cerca de un planeta) 🧑‍🚀",
         padsMenu: "🛬 Plataformas de aterrizaje",
         eveChestTitle: "Haz clic en su pecho para molestarla",
@@ -446,7 +447,7 @@
         hudWS: "<strong>W / ↑</strong> forward · <strong>S / ↓</strong> backward",
         hudAD: "<strong>A / ←</strong> left · <strong>D / →</strong> right",
         hudQE: "<strong>Q</strong> lower altitude (Y) · <strong>E</strong> raise altitude (Y)",
-        hudSpace: "<strong>SPACE</strong> toggle turbo 🚀",
+        hudSpace: "<strong>SPACE</strong> turbo (flying) · jump (walking) 🚀",
         hudPark: "<strong>KEY F</strong>: Board the ship (next to it) · Land / Take off (near a planet) 🧑‍🚀",
         padsMenu: "🛬 Landing pads",
         eveChestTitle: "Click her chest to annoy her",
@@ -1038,61 +1039,152 @@
       spaceLight.position.set(400, 600, 400);
       scene.add(spaceLight);
 
-      function generatePlanetTexture(type, baseHex, detailHex) {
-        const c = document.createElement('canvas');
-        c.width = 1024; c.height = 512;
-        const ctx = c.getContext('2d');
-        ctx.fillStyle = baseHex;
-        ctx.fillRect(0, 0, c.width, c.height);
-
-        if (type === 'craters') {
-          ctx.fillStyle = detailHex;
-          for (let i = 0; i < 500; i++) {
-            const x = Math.random() * c.width, y = Math.random() * c.height, r = Math.random() * 16 + 2;
-            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.stroke();
-          }
-        } else if (type === 'gas') {
-          for (let i = 0; i < c.height; i++) {
-            const n = Math.sin(i * 0.04) * Math.cos(i * 0.015);
-            if (n > 0.05) { ctx.fillStyle = detailHex; ctx.globalAlpha = Math.min(1, n * 0.85); ctx.fillRect(0, i, c.width, Math.random() * 10 + 2); }
-          }
-          ctx.globalAlpha = 1.0;
-        } else if (type === 'earth') {
-          ctx.fillStyle = '#1e702c';
-          for (let i = 0; i < 22; i++) { ctx.beginPath(); ctx.arc(Math.random() * c.width, Math.random() * c.height, Math.random() * 130 + 40, 0, Math.PI * 2); ctx.fill(); }
-          ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.5;
-          for (let i = 0; i < 35; i++) { ctx.fillRect(Math.random() * c.width, Math.random() * c.height, Math.random() * 220 + 60, Math.random() * 30 + 6); }
-          ctx.globalAlpha = 1.0;
-        } else if (type === 'clouds') {
-          ctx.fillStyle = detailHex; ctx.globalAlpha = 0.35;
-          for (let i = 0; i < c.height; i += 3) { ctx.fillRect(0, i, c.width, Math.random() * 14 + 2); }
-          ctx.globalAlpha = 1.0;
+      // ================== TEXTURAS DE PLANETAS (procedurales, inspiradas en fotos reales de NASA) ==================
+      // Ruido "value noise" 3D muestreado sobre un cilindro: la textura se repite sin costura de izquierda a derecha.
+      const _perm = (() => { const p = new Uint8Array(512); let s = 1234567; for (let i = 0; i < 256; i++) p[i] = i;
+        for (let i = 255; i > 0; i--) { s = (s * 16807) % 2147483647; const j = s % (i + 1); [p[i], p[j]] = [p[j], p[i]]; }
+        for (let i = 0; i < 256; i++) p[i + 256] = p[i]; return p; })();
+      function _ruido3(x, y, z) {
+        const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z), fx = x - X, fy = y - Y, fz = z - Z;
+        const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), w = fz * fz * (3 - 2 * fz);
+        const h = (i, j, k) => _perm[(_perm[(_perm[(X + i) & 255] + Y + j) & 255] + Z + k) & 255] / 255;
+        const l = (a, b, t) => a + (b - a) * t;
+        return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
+      }
+      function _fbm(x, y, z, oct) { let a = .5, f = 1, s = 0, n = 0; for (let i = 0; i < oct; i++) { s += a * _ruido3(x * f, y * f, z * f); n += a; f *= 2.03; a *= .5; } return s / n; }
+      // Pinta un campo de color calculado píxel a píxel (en baja resolución) y lo amplía suavemente
+      function _campo(W, H, fn, OW, OH) {
+        const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d'), img = ctx.createImageData(W, H), d = img.data;
+        for (let j = 0; j < H; j++) { const lat = (0.5 - (j + .5) / H) * Math.PI;
+          for (let i = 0; i < W; i++) { const lon = (i + .5) / W * Math.PI * 2;
+            const col = fn(Math.cos(lon), Math.sin(lon), lat, lon); const k = (j * W + i) * 4;
+            d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = col[3] === undefined ? 255 : col[3]; } }
+        ctx.putImageData(img, 0, 0);
+        const o = document.createElement('canvas'); o.width = OW || 1024; o.height = OH || 512; const octx = o.getContext('2d');
+        octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high'; octx.drawImage(c, 0, 0, o.width, o.height);
+        return o;
+      }
+      const _mezcla = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+      const _sat = t => Math.max(0, Math.min(1, t));
+      function _crateres(ctx, W, H, n, rmin, rmax, oscuro, claro) {
+        for (let i = 0; i < n; i++) {
+          const x = Math.random() * W, y = H * (.08 + Math.random() * .84), r = rmin + Math.pow(Math.random(), 3) * (rmax - rmin);
+          const g = ctx.createRadialGradient(x - r * .25, y - r * .25, r * .1, x, y, r);
+          g.addColorStop(0, oscuro); g.addColorStop(.75, oscuro); g.addColorStop(.92, claro); g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r, r * .92, 0, 0, Math.PI * 2); ctx.fill();
         }
-        const texture = new THREE.CanvasTexture(c);
-        texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.ClampToEdgeWrapping;
-        return texture;
+      }
+      function _tex(canvas) { const t = new THREE.CanvasTexture(canvas); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; t.anisotropy = 4; return t; }
+
+      function generatePlanetTexture(tipo) {
+        let c;
+        if (tipo === 'tierra') {
+          c = _campo(512, 256, (x, y, lat) => {
+            const n = _fbm(x * 1.6 + 7, y * 1.6, lat * 1.6, 6), polo = Math.abs(lat) / (Math.PI / 2);
+            if (polo > .86 + (n - .5) * .2) return [236, 242, 248];                    // hielo polar
+            if (n < .53) return _mezcla([8, 30, 78], [26, 82, 148], _sat((n - .3) / .23));   // océano: más claro cerca de la costa
+            const seco = _sat(1 - Math.abs(Math.abs(lat) - .45) * 4) * .8 + _fbm(x * 4, y * 4, lat * 4 + 3, 3) * .4;   // desiertos cerca de los 25°
+            const verde = _mezcla([46, 104, 46], [92, 120, 58], _sat((n - .53) * 6));
+            return _mezcla(verde, [176, 148, 96], _sat(seco - .3));
+          });
+        } else if (tipo === 'nubes') {
+          c = _campo(512, 256, (x, y, lat) => {
+            const n = _fbm(x * 2.4 + 3, y * 2.4, lat * 3.2, 6), a = _sat((n - .56) * 3.4);
+            return [255, 255, 255, Math.round(a * 210)];
+          });
+        } else if (tipo === 'marte') {
+          c = _campo(512, 256, (x, y, lat) => {
+            const n = _fbm(x * 1.8, y * 1.8, lat * 1.8, 5), m = _fbm(x * .9 + 11, y * .9, lat * .9, 4), polo = Math.abs(lat) / (Math.PI / 2);
+            if (polo > .88 + (n - .5) * .15) return [240, 236, 228];                    // casquetes polares de hielo
+            let col = _mezcla([150, 62, 32], [205, 112, 64], n);
+            if (m > .58) col = _mezcla(col, [92, 48, 34], _sat((m - .58) * 4));       // regiones oscuras (como Syrtis Major)
+            return col;
+          });
+          const ctx = c.getContext('2d');
+          ctx.strokeStyle = 'rgba(70,30,18,.55)'; ctx.lineWidth = 6; ctx.beginPath();  // Valles Marineris: el gran cañón
+          ctx.moveTo(c.width * .55, c.height * .53); ctx.bezierCurveTo(c.width * .6, c.height * .56, c.width * .66, c.height * .52, c.width * .72, c.height * .55); ctx.stroke();
+          ctx.fillStyle = 'rgba(120,60,40,.6)'; ctx.beginPath(); ctx.arc(c.width * .38, c.height * .41, 10, 0, 7); ctx.fill();   // Olympus Mons
+          _crateres(ctx, c.width, c.height, 90, 2, 12, 'rgba(110,50,28,.35)', 'rgba(230,150,100,.35)');
+        } else if (tipo === 'mercurio' || tipo === 'luna') {
+          const luna = tipo === 'luna';
+          c = _campo(512, 256, (x, y, lat) => {
+            const n = _fbm(x * 2.2 + (luna ? 5 : 9), y * 2.2, lat * 2.2, 5), m = _fbm(x * .8 + 2, y * .8, lat * .8, 3);
+            let col = luna ? _mezcla([118, 118, 116], [178, 176, 172], n) : _mezcla([104, 96, 88], [160, 150, 138], n);
+            if (luna && m > .56) col = _mezcla(col, [70, 72, 76], _sat((m - .56) * 4));   // "mares" lunares oscuros
+            return col;
+          });
+          const ctx = c.getContext('2d');
+          _crateres(ctx, c.width, c.height, luna ? 260 : 340, 2, luna ? 22 : 18, 'rgba(60,60,60,.32)', 'rgba(235,235,230,.45)');
+        } else if (tipo === 'venus') {
+          c = _campo(256, 128, (x, y, lat) => {
+            const w = _fbm(x * 1.5, y * 1.5, lat * 1.5, 4);
+            const n = _fbm(x * 1.2 + w * 2, y * 1.2, lat * 6 + w * 3, 5);              // nubes estiradas en franjas
+            return _mezcla([196, 150, 84], [246, 222, 160], n);
+          });
+        } else if (tipo === 'jupiter' || tipo === 'saturno' || tipo === 'urano' || tipo === 'neptuno') {
+          const P = {
+            jupiter: [[234, 220, 196], [196, 150, 104], [150, 98, 64], [228, 204, 168], [176, 118, 80]],
+            saturno: [[238, 220, 176], [214, 188, 140], [196, 166, 118], [232, 210, 162]],
+            urano: [[150, 214, 222], [134, 200, 212], [160, 222, 228]],
+            neptuno: [[44, 84, 190], [36, 70, 168], [64, 110, 214], [30, 58, 150]]
+          }[tipo];
+          const fuerza = { jupiter: 1, saturno: .55, urano: .18, neptuno: .45 }[tipo];
+          c = _campo(512, 256, (x, y, lat) => {
+            const t = _fbm(x * 2, y * 2, lat * 3, 4);
+            const v = lat * 7 + (t - .5) * 1.6 * fuerza + Math.sin(lat * 23) * .3 * fuerza;   // franjas con turbulencia
+            const k = ((v % P.length) + P.length) % P.length, i0 = Math.floor(k), f = k - i0;
+            return _mezcla(P[i0], P[(i0 + 1) % P.length], f * f * (3 - 2 * f));
+          });
+          const ctx = c.getContext('2d');
+          if (tipo === 'jupiter') {   // Gran Mancha Roja (unos 22° al sur)
+            const g = ctx.createRadialGradient(c.width * .3, c.height * .62, 2, c.width * .3, c.height * .62, 40);
+            g.addColorStop(0, 'rgba(178,74,46,.95)'); g.addColorStop(.6, 'rgba(196,104,70,.8)'); g.addColorStop(1, 'rgba(196,120,80,0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(c.width * .3, c.height * .62, 44, 22, 0, 0, 7); ctx.fill();
+          }
+          if (tipo === 'neptuno') {   // Gran Mancha Oscura y nubes blancas (vistas por Voyager 2 en 1989)
+            ctx.fillStyle = 'rgba(16,30,90,.75)'; ctx.beginPath(); ctx.ellipse(c.width * .45, c.height * .64, 34, 18, 0, 0, 7); ctx.fill();
+            ctx.fillStyle = 'rgba(240,248,255,.7)'; ctx.beginPath(); ctx.ellipse(c.width * .47, c.height * .72, 26, 4, 0, 0, 7); ctx.fill();
+          }
+        } else if (tipo === 'sol') {
+          c = _campo(256, 128, (x, y, lat) => {
+            const n = _fbm(x * 6, y * 6, lat * 6, 4);                                  // granulación de la superficie
+            return _mezcla([255, 150, 30], [255, 236, 150], n);
+          }, 512, 256);
+        }
+        return _tex(c);
       }
 
       function generateRingTexture() {
-        const c = document.createElement('canvas'); c.width = 512; c.height = 1;
+        // Anillos de Saturno: muchas franjas finas y la División de Cassini (el hueco oscuro)
+        const c = document.createElement('canvas'); c.width = 1024; c.height = 4;
         const ctx = c.getContext('2d');
-        const grad = ctx.createLinearGradient(0, 0, 512, 0);
-        grad.addColorStop(0.0, 'rgba(0,0,0,0)');
-        grad.addColorStop(0.2, 'rgba(210,185,140,0.85)');
-        grad.addColorStop(0.4, 'rgba(120,95,70,0.2)');
-        grad.addColorStop(0.7, 'rgba(230,205,160,0.95)');
-        grad.addColorStop(1.0, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad; ctx.fillRect(0, 0, 512, 1);
+        for (let i = 0; i < 1024; i++) {
+          const t = i / 1023;
+          let a = .55 + .35 * Math.sin(t * 90) * Math.sin(t * 23 + 1) + (Math.random() - .5) * .2;
+          if (t < .12) a *= t / .12 * .5;                    // anillo C, tenue
+          if (t > .56 && t < .62) a *= .08;                  // División de Cassini
+          if (t > .93) a *= (1 - t) / .07;
+          const col = t < .56 ? [222, 200, 160] : [200, 180, 146];
+          ctx.fillStyle = 'rgba(' + col.join(',') + ',' + _sat(a).toFixed(3) + ')'; ctx.fillRect(i, 0, 1, 4);
+        }
         return new THREE.CanvasTexture(c);
+      }
+      // Brillo de atmósfera en el borde del planeta (más fuerte en el contorno, como en las fotos desde el espacio)
+      function atmosferaBrillo(radio, color, fuerza) {
+        return new THREE.Mesh(new THREE.SphereGeometry(radio, 64, 48), new THREE.ShaderMaterial({
+          uniforms: { color: { value: new THREE.Color(color) }, fuerza: { value: fuerza || 1 } },
+          vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position,1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+          fragmentShader: 'uniform vec3 color; uniform float fuerza; varying vec3 vN; varying vec3 vV; void main(){ float r = 1.0 - max(dot(vN, vV), 0.0); float i = pow(r, 2.6) * fuerza; gl_FragColor = vec4(color, i); }',
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+        }));
       }
 
       // Sol
       const sunGroup = new THREE.Group();
       const sunRadius = 1600;   // escala semi-real: el Sol es mucho más grande que cualquier planeta (comprimido para que quepa)
-      sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(sunRadius, 72, 72), new THREE.MeshBasicMaterial({ color: 0xffaa00 })));
+      sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(sunRadius, 72, 72), new THREE.MeshBasicMaterial({ map: generatePlanetTexture('sol') })));
       sunGroup.add(new THREE.Mesh(new THREE.SphereGeometry(sunRadius * 1.233, 48, 48), new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.38, side: THREE.BackSide })));
-      sunGroup.add(new THREE.PointLight(0xffeedd, 5.0, 80000));
+      sunGroup.add(new THREE.PointLight(0xffeedd, 2.3, 80000));   // más suave: las texturas nuevas tienen colores reales y se veían quemadas
       sunGroup.position.set(0, 0, 0);
       scene.add(sunGroup);
 
@@ -1111,14 +1203,14 @@
       // Planetas
       const ringTexture = generateRingTexture();
       const planetsData = [
-        { name: 'Mercurio', radius: 50, distance: 3600, angle: 0.4, tex: generatePlanetTexture('craters', '#686665', '#3d3b3a'), atmosphere: null },
-        { name: 'Venus', radius: 123, distance: 4600, angle: 2.1, tex: generatePlanetTexture('clouds', '#e3bb76', '#c99642'), atmosphere: 0xffda91 },
-        { name: 'Tierra', radius: 130, distance: 6000, angle: 4.2, tex: generatePlanetTexture('earth', '#18477d', '#1e702c'), atmosphere: 0x00bfff },
-        { name: 'Marte', radius: 70, distance: 7500, angle: 1.1, tex: generatePlanetTexture('craters', '#c44521', '#75240c'), atmosphere: 0xff7744 },
-        { name: 'Júpiter', radius: 1000, distance: 12500, angle: 5.5, tex: generatePlanetTexture('gas', '#d4a373', '#7d5236'), atmosphere: 0xffd8b3 },
-        { name: 'Saturno', radius: 850, distance: 17500, angle: 3.3, tex: generatePlanetTexture('gas', '#f4e2bb', '#a8946f'), atmosphere: 0xffecc4, ring: { inner: 930, outer: 1580 } },
-        { name: 'Urano', radius: 420, distance: 22000, angle: 0.8, tex: generatePlanetTexture('gas', '#70d6ff', '#3aa2cc'), atmosphere: 0x70d6ff },
-        { name: 'Neptuno', radius: 410, distance: 26000, angle: 2.7, tex: generatePlanetTexture('gas', '#2b62d9', '#15398a'), atmosphere: 0x3a86ff }
+        { name: 'Mercurio', radius: 50, distance: 3600, angle: 0.4, tex: generatePlanetTexture('mercurio'), atmosphere: null },
+        { name: 'Venus', radius: 123, distance: 4600, angle: 2.1, tex: generatePlanetTexture('venus'), atmosphere: 0xffda91 },
+        { name: 'Tierra', radius: 130, distance: 6000, angle: 4.2, tex: generatePlanetTexture('tierra'), atmosphere: 0x00bfff },
+        { name: 'Marte', radius: 70, distance: 7500, angle: 1.1, tex: generatePlanetTexture('marte'), atmosphere: 0xff7744 },
+        { name: 'Júpiter', radius: 1000, distance: 12500, angle: 5.5, tex: generatePlanetTexture('jupiter'), atmosphere: 0xffd8b3 },
+        { name: 'Saturno', radius: 850, distance: 17500, angle: 3.3, tex: generatePlanetTexture('saturno'), atmosphere: 0xffecc4, ring: { inner: 930, outer: 1580 } },
+        { name: 'Urano', radius: 420, distance: 22000, angle: 0.8, tex: generatePlanetTexture('urano'), atmosphere: 0x70d6ff },
+        { name: 'Neptuno', radius: 410, distance: 26000, angle: 2.7, tex: generatePlanetTexture('neptuno'), atmosphere: 0x3a86ff }
       ];
 
       const planetObjects = [];
@@ -1127,10 +1219,19 @@
         const sphere = new THREE.Mesh(new THREE.SphereGeometry(data.radius, data.radius > 300 ? 192 : 64, data.radius > 300 ? 192 : 64), new THREE.MeshStandardMaterial({ map: data.tex, roughness: 0.65, metalness: 0.1 }));
         group.add(sphere);
         if (data.atmosphere) {
-          group.add(new THREE.Mesh(new THREE.SphereGeometry(data.radius * 1.03, data.radius > 300 ? 96 : 32, data.radius > 300 ? 96 : 32), new THREE.MeshBasicMaterial({ color: data.atmosphere, transparent: true, opacity: 0.22, side: THREE.BackSide })));
+          // borde luminoso de la atmósfera (Mercurio no tiene atmósfera)
+          const atm = atmosferaBrillo(data.radius * 1.025, data.atmosphere, data.name === 'Tierra' ? 1.4 : data.name === 'Venus' ? 1.2 : data.name === 'Marte' ? .7 : .9);
+          atm.userData.atmo = data.name; group.add(atm);
+        }
+        if (data.name === 'Tierra') {   // capa de nubes que gira un poco más rápido que el suelo
+          const nubes = new THREE.Mesh(new THREE.SphereGeometry(data.radius * 1.012, 64, 48), new THREE.MeshStandardMaterial({ map: generatePlanetTexture('nubes'), transparent: true, depthWrite: false, roughness: 1 }));
+          group.add(nubes); window.__nubesTierra = nubes;
         }
         if (data.ring) {
-          const ringMesh = new THREE.Mesh(new THREE.RingGeometry(data.ring.inner, data.ring.outer, 96), new THREE.MeshBasicMaterial({ map: ringTexture, side: THREE.DoubleSide, transparent: true, opacity: 0.88 }));
+          const ringGeo = new THREE.RingGeometry(data.ring.inner, data.ring.outer, 160, 4);
+          { const pos = ringGeo.attributes.position, uv = ringGeo.attributes.uv;   // la textura va del borde interior al exterior
+            for (let k = 0; k < pos.count; k++) { const r = Math.hypot(pos.getX(k), pos.getY(k)); uv.setXY(k, (r - data.ring.inner) / (data.ring.outer - data.ring.inner), .5); } }
+          const ringMesh = new THREE.Mesh(ringGeo, new THREE.MeshStandardMaterial({ map: ringTexture, side: THREE.DoubleSide, transparent: true, depthWrite: false, roughness: 1 }));
           ringMesh.rotation.x = Math.PI / 2.2; group.add(ringMesh);
         }
         const x = Math.cos(data.angle) * data.distance, z = Math.sin(data.angle) * data.distance, y = 0;
@@ -1146,7 +1247,7 @@
       const moonRadius = 35;
       const moonMesh = new THREE.Mesh(
         new THREE.SphereGeometry(moonRadius, 48, 48),
-        new THREE.MeshStandardMaterial({ map: generatePlanetTexture('craters', '#7a7a7a', '#3b3b3b'), roughness: 0.9 })
+        new THREE.MeshStandardMaterial({ map: generatePlanetTexture('luna'), color: 0x9a9a9a, roughness: 0.95 })
       );
       earthMoonGroup.add(moonMesh);
 
@@ -1936,6 +2037,223 @@
         return g;
       }
 
+      // ---- Modelos 3D de las naves de Marte (inspirados en fotos y diagramas de NASA, ESA, Roscosmos y CNSA; no son escaneos) ----
+      const MM = {
+        blanco: new THREE.MeshStandardMaterial({ color: 0xe6e3dc, metalness: .35, roughness: .55 }),
+        oro: new THREE.MeshStandardMaterial({ color: 0xc9a23a, metalness: .75, roughness: .32 }),
+        gris: new THREE.MeshStandardMaterial({ color: 0x8d949b, metalness: .7, roughness: .35 }),
+        oscuro: new THREE.MeshStandardMaterial({ color: 0x2a2e33, metalness: .3, roughness: .7 }),
+        solar: new THREE.MeshStandardMaterial({ color: 0x1b2f63, metalness: .55, roughness: .25, emissive: 0x050a1a }),
+        rueda: new THREE.MeshStandardMaterial({ color: 0x55595e, metalness: .6, roughness: .5 }),
+        tela: new THREE.MeshStandardMaterial({ color: 0xd9cdb4, metalness: 0, roughness: .95 }),
+        quemado: new THREE.MeshStandardMaterial({ color: 0x3b2b24, metalness: .2, roughness: .95 }),
+        rojo: new THREE.MeshStandardMaterial({ color: 0xb33a2e, metalness: .3, roughness: .6 })
+      };
+      const mBox = (p, w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); p.add(m); return m; };
+      const mCyl = (p, rt, rb, h, seg, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat); m.position.set(x, y, z); p.add(m); return m; };
+      const mSph = (p, r, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat); m.position.set(x, y, z); p.add(m); return m; };
+      function mRueda(p, r, w, x, y, z) { const m = mCyl(p, r, r, w, 14, MM.rueda, x, y, z); m.rotation.x = Math.PI / 2; return m; }
+      function mPlato(p, r, x, y, z, rx) { const d = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3.2), MM.blanco); d.position.set(x, y, z); d.rotation.x = rx || 0; p.add(d); return d; }
+      // Rover de seis ruedas con balancines (rocker-bogie): base de Sojourner, Spirit/Opportunity, Curiosity, Perseverance y Zhurong
+      function mSeisRuedas(p, largo, ancho, r, alto) {
+        for (const lado of [-1, 1]) for (const k of [-1, 0, 1]) {
+          const x = k * largo / 2, z = lado * ancho / 2;
+          mRueda(p, r, r * .8, x, r, z);
+          rodBetween(p, [x, r, z], [k * largo / 4, alto, lado * ancho / 2.6], .035, MM.gris, 6);
+        }
+      }
+      function buildMarsSoviet(estrellado) {
+        // Mars 2, 3 y 6: cápsula esférica que se abría en cuatro pétalos. Mars 2 y 6 se estrellaron.
+        const g = new THREE.Group();
+        if (estrellado) {
+          const c = mSph(g, .75, MM.gris, 0, .25, 0); c.scale.set(1.1, .55, .9);
+          mBox(g, .7, .12, .5, MM.quemado, 1.3, .06, .4).rotation.y = .6;
+          mBox(g, .4, .1, .6, MM.gris, -1.1, .05, -.6).rotation.y = 1.2;
+          const esc = mCyl(g, 2.3, 2.3, .02, 24, MM.quemado, 0, .01, 0); esc.material = esc.material.clone(); esc.material.transparent = true; esc.material.opacity = .55;
+          return g;
+        }
+        mSph(g, .7, MM.gris, 0, .75, 0);
+        for (let i = 0; i < 4; i++) {
+          const a = i * Math.PI / 2, pet = new THREE.Group(); pet.rotation.y = a; g.add(pet);
+          const lam = mBox(pet, .9, .05, .8, MM.blanco, 1.05, .25, 0); lam.rotation.z = -.25;
+        }
+        mCyl(g, .03, .03, 1.2, 6, MM.gris, .3, 1.6, .2); mCyl(g, .03, .03, 1, 6, MM.gris, -.35, 1.5, -.25);
+        mCyl(g, .12, .12, .3, 10, MM.oscuro, 0, 1.45, 0);   // cámara
+        // pequeño rover de esquís PrOP-M
+        mBox(g, .35, .15, .3, MM.gris, 1.9, .1, .9);
+        return g;
+      }
+      function buildViking() {
+        const g = new THREE.Group();
+        const cuerpo = mCyl(g, .95, .95, .45, 6, MM.blanco, 0, .95, 0);
+        mCyl(g, .97, .97, .06, 6, MM.oro, 0, .72, 0);
+        for (let i = 0; i < 3; i++) {   // tres patas con platos
+          const a = i * Math.PI * 2 / 3 + .5, x = Math.cos(a), z = Math.sin(a);
+          rodBetween(g, [x * .8, .85, z * .8], [x * 1.55, .08, z * 1.55], .06, MM.gris, 8);
+          mCyl(g, .22, .26, .06, 14, MM.gris, x * 1.55, .04, z * 1.55);
+        }
+        mBox(g, .55, .35, .3, MM.oscuro, .45, 1.32, .45).rotation.y = .7;    // cubiertas de los generadores RTG
+        mBox(g, .55, .35, .3, MM.oscuro, -.55, 1.32, .35).rotation.y = -.7;
+        mCyl(g, .04, .04, 1.1, 6, MM.gris, -.2, 1.7, -.45);                   // mástil de la antena
+        mPlato(g, .55, -.2, 2.28, -.45, -.4);                                  // antena de alta ganancia
+        mCyl(g, .09, .09, .5, 10, MM.blanco, .55, 1.4, -.55); mCyl(g, .09, .09, .5, 10, MM.blanco, -.65, 1.4, -.1);   // cámaras
+        rodBetween(g, [.4, 1.15, .7], [1.4, .9, 1.3], .05, MM.gris, 6);       // brazo para tomar muestras
+        mBox(g, .18, .12, .25, MM.gris, 1.45, .85, 1.33);
+        rodBetween(g, [-.7, 1.15, .6], [-.9, 2.1, .9], .025, MM.gris, 6);     // mástil del clima
+        mBox(g, .25, .05, .05, MM.blanco, -.9, 2.12, .9);
+        return g;
+      }
+      function buildPathfinder() {
+        const g = new THREE.Group();
+        mCyl(g, .75, .75, .25, 3, MM.blanco, 0, .2, 0);
+        for (let i = 0; i < 3; i++) {   // tres pétalos abiertos con paneles solares
+          const a = i * Math.PI * 2 / 3, pet = new THREE.Group(); pet.rotation.y = a; g.add(pet);
+          const pl = mBox(pet, .9, .04, 1.05, MM.solar, 1.05, .1, 0);
+          const bolsa = mSph(pet, .55, MM.tela, 1.9, .2, 0); bolsa.scale.set(.8, .35, 1.1);   // bolsas de aire desinfladas
+        }
+        mCyl(g, .03, .03, .95, 6, MM.gris, 0, .8, 0);                          // mástil de la cámara IMP
+        mBox(g, .3, .16, .16, MM.oscuro, 0, 1.3, 0);
+        rodBetween(g, [.45, .25, .5], [1.1, .02, 1.2], .12, MM.gris, 4);     // rampa
+        // Sojourner: 10,6 kg, seis ruedas y un panel solar plano
+        const s = new THREE.Group(); s.position.set(2.1, 0, 1.6); s.rotation.y = -.8; g.add(s);
+        mSeisRuedas(s, .55, .45, .09, .22);
+        mBox(s, .62, .14, .45, MM.gris, 0, .27, 0);
+        mBox(s, .66, .02, .48, MM.solar, 0, .35, 0);
+        mCyl(s, .01, .01, .3, 4, MM.gris, -.25, .5, .15);
+        return g;
+      }
+      function buildMER() {
+        // Spirit y Opportunity: cubierta solar de seis "alas", mástil con cámaras, brazo y antena de disco
+        const g = new THREE.Group();
+        mSeisRuedas(g, 1.4, 1.15, .2, .55);
+        mBox(g, 1.2, .35, .8, MM.oro, 0, .7, 0);
+        mBox(g, 1.6, .04, 1.5, MM.solar, 0, .92, 0);
+        mBox(g, .5, .04, .8, MM.solar, .95, .9, .6).rotation.y = .5;
+        mBox(g, .5, .04, .8, MM.solar, .95, .9, -.6).rotation.y = -.5;
+        mBox(g, .6, .04, .5, MM.solar, -1, .9, 0);
+        mCyl(g, .04, .04, .9, 8, MM.blanco, .45, 1.37, .35);                  // mástil Pancam
+        mBox(g, .38, .12, .14, MM.blanco, .45, 1.85, .35);
+        mCyl(g, .16, .16, .03, 16, MM.gris, -.35, 1.05, -.35).rotation.z = .5;   // antena de alta ganancia
+        mCyl(g, .015, .015, .7, 4, MM.gris, -.55, 1.3, .4);                   // antena de baja ganancia
+        rodBetween(g, [.7, .7, -.3], [1.15, .45, -.5], .04, MM.gris, 6);     // brazo con instrumentos
+        mBox(g, .16, .16, .16, MM.gris, 1.2, .38, -.52);
+        return g;
+      }
+      function buildCuriosity(perseverance) {
+        const g = new THREE.Group();
+        mSeisRuedas(g, 2, 1.6, .3, .8);
+        mBox(g, 1.8, .55, 1.15, MM.blanco, 0, 1.05, 0);
+        mBox(g, 1.85, .06, 1.2, MM.gris, 0, 1.35, 0);
+        const rtg = mCyl(g, .22, .22, .8, 10, MM.oscuro, -1.2, 1.25, 0); rtg.rotation.z = 1;   // generador nuclear (RTG) atrás
+        for (let i = 0; i < 6; i++) { const f = mBox(g, .7, .03, .12, MM.oscuro, -1.2, 1.25, 0); f.rotation.set(i * Math.PI / 6, 0, 1); }
+        mCyl(g, .06, .06, 1.1, 8, MM.blanco, .7, 1.9, .35);                   // mástil
+        const cab = mBox(g, .45, .3, .3, MM.blanco, .75, 2.5, .35);
+        mCyl(g, .09, .09, .1, 12, MM.oscuro, .99, 2.55, .35).rotation.z = Math.PI / 2;   // lente ChemCam / SuperCam
+        mBox(g, .35, .05, .35, MM.gris, -.3, 1.45, -.4).rotation.y = .6;     // antena hexagonal
+        rodBetween(g, [.9, 1.1, -.45], [1.5, .9, -.55], .06, MM.blanco, 8);  // brazo robótico
+        rodBetween(g, [1.5, .9, -.55], [1.75, .5, -.55], .05, MM.blanco, 8);
+        mCyl(g, .2, .2, .25, 10, MM.gris, 1.8, .4, -.55);                     // torreta con taladro
+        if (perseverance) {
+          // Ingenuity: 1,8 kg, dos hélices coaxiales de 1,2 m y un panel solar arriba
+          const h = new THREE.Group(); h.position.set(2.6, 0, 1.6); g.add(h);
+          mBox(h, .2, .18, .2, MM.blanco, 0, .38, 0);
+          for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) rodBetween(h, [x * .07, .3, z * .07], [x * .25, 0, z * .25], .012, MM.gris, 4);
+          mCyl(h, .015, .015, .4, 4, MM.gris, 0, .65, 0);
+          mBox(h, 1.2, .015, .07, MM.oscuro, 0, .58, 0); mBox(h, 1.2, .015, .07, MM.oscuro, 0, .68, 0).rotation.y = Math.PI / 2;
+          mBox(h, .2, .02, .14, MM.solar, 0, .86, 0);
+        }
+        return g;
+      }
+      function buildPhoenixInsight(insight) {
+        // Plataforma de diez lados y dos paneles solares redondos ("abanicos")
+        const g = new THREE.Group();
+        mCyl(g, .75, .75, .35, 10, MM.blanco, 0, .95, 0);
+        mCyl(g, .77, .77, .05, 10, MM.oro, 0, .76, 0);
+        for (let i = 0; i < 3; i++) {
+          const a = i * Math.PI * 2 / 3 + .3, x = Math.cos(a), z = Math.sin(a);
+          rodBetween(g, [x * .6, .8, z * .6], [x * 1.1, .06, z * 1.1], .06, MM.gris, 8);
+          mCyl(g, .16, .2, .05, 12, MM.gris, x * 1.1, .03, z * 1.1);
+        }
+        for (const lado of [-1, 1]) {
+          const p = mCyl(g, 1.05, 1.05, .04, 10, MM.solar, 0, 1, lado * 1.75);
+          mCyl(g, 1.07, 1.07, .02, 10, MM.oro, 0, .97, lado * 1.75);
+          rodBetween(g, [0, 1, lado * .75], [0, 1, lado * .9], .05, MM.gris, 6);
+        }
+        rodBetween(g, [.5, 1.15, 0], [1.4, 1.6, 0], .04, MM.blanco, 6);       // brazo robótico
+        rodBetween(g, [1.4, 1.6, 0], [1.9, .6, 0], .035, MM.blanco, 6);
+        mBox(g, .2, .12, .3, MM.gris, 1.95, .5, 0);                           // pala
+        mCyl(g, .03, .03, .8, 6, MM.gris, -.4, 1.5, .3); mBox(g, .2, .15, .15, MM.blanco, -.4, 1.95, .3);   // cámara
+        if (insight) {
+          // Sismómetro SEIS bajo su cúpula, y la sonda de calor HP3
+          mSph(g, .45, MM.blanco, 2.2, 0, -.9).scale.set(1, .75, 1);
+          mCyl(g, .5, .55, .04, 20, MM.gris, 2.2, .02, -.9);
+          mBox(g, .25, .3, .25, MM.oro, 2.1, .15, .95);
+        } else {
+          mCyl(g, .02, .02, 1.1, 4, MM.gris, -.5, 1.6, -.4);                   // mástil del clima (Phoenix)
+          mBox(g, .25, .03, .03, MM.blanco, -.5, 2.15, -.4);
+          mBox(g, .7, .12, .35, MM.blanco, 1.9, .06, .9).material = MM.tela;   // zanja "Dodo-Goldilocks"
+        }
+        return g;
+      }
+      function buildZhurong() {
+        // Plataforma Tianwen-1 con rampas, y el rover Zhurong con cuatro paneles en forma de mariposa
+        const g = new THREE.Group();
+        mCyl(g, 1, 1.1, .35, 8, MM.gris, 0, .45, 0);
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + .4; rodBetween(g, [Math.cos(a) * .8, .4, Math.sin(a) * .8], [Math.cos(a) * 1.4, .05, Math.sin(a) * 1.4], .05, MM.gris, 6); }
+        rodBetween(g, [.9, .6, 0], [1.9, .02, 0], .16, MM.gris, 4);           // rampa
+        const r = new THREE.Group(); r.position.set(2.8, 0, .6); r.rotation.y = .3; g.add(r);
+        mSeisRuedas(r, 1.1, .9, .17, .45);
+        mBox(r, 1, .35, .7, MM.blanco, 0, .6, 0);
+        for (const [x, z, ry] of [[.55, .7, .5], [.55, -.7, -.5], [-.45, .75, -.4], [-.45, -.75, .4]]) { const p = mBox(r, .7, .03, .55, MM.solar, x, .85, z); p.rotation.set(0, ry, z > 0 ? .25 : -.25); }
+        mCyl(r, .04, .04, .7, 6, MM.blanco, .35, 1.05, 0); mBox(r, .3, .12, .14, MM.blanco, .35, 1.45, 0);
+        return g;
+      }
+      function buildBeagle2() {
+        // Beagle 2: un disco con pétalos solares; solo se abrieron algunos (por eso no pudo comunicarse)
+        const g = new THREE.Group();
+        mCyl(g, .5, .55, .25, 20, MM.oro, 0, .14, 0);
+        const ang = [0, 1.25, 2.5];
+        ang.forEach((a, i) => { const p = mCyl(g, .5, .5, .03, 5, MM.solar, Math.cos(a) * .9, i < 2 ? .1 : .5, Math.sin(a) * .9); if (i === 2) p.rotation.x = 1.1; });
+        return g;
+      }
+      function buildSchiaparelli() {
+        // Schiaparelli: se estrelló en 2016. Mancha oscura del impacto, restos y el paracaídas a un lado
+        const g = new THREE.Group();
+        const esc = mCyl(g, 2.4, 2.4, .02, 24, MM.quemado, 0, .01, 0); esc.material = MM.quemado.clone(); esc.material.transparent = true; esc.material.opacity = .6;
+        mCyl(g, .6, .8, .25, 16, MM.gris, .2, .1, -.1).rotation.set(.3, 0, .4);
+        mBox(g, .4, .08, .3, MM.blanco, -.9, .04, .5).rotation.y = .8;
+        const para = mCyl(g, 0, 1.1, .35, 18, MM.tela, 2.6, .1, 1.4); para.rotation.z = 1.3;   // paracaídas
+        mSph(g, .5, MM.blanco, -2.2, .2, -1.6).scale.set(1, .5, 1);           // escudo trasero
+        return g;
+      }
+      function buildMPL() {
+        // Mars Polar Lander: se perdió al llegar en 1999 y nunca se encontró. Restos posibles y las dos sondas Deep Space 2
+        const g = new THREE.Group();
+        const c = mCyl(g, .7, .7, .3, 10, MM.blanco, 0, .25, 0); c.rotation.set(.5, 0, .3);
+        mCyl(g, .9, .9, .03, 10, MM.solar, 1.2, .08, .7).rotation.z = .15;
+        for (const [x, z] of [[-1.8, 1], [-1.4, -1.3]]) { mCyl(g, .12, .2, .3, 10, MM.gris, x, .1, z); }
+        return g;
+      }
+      function buildMarsModel(n) {
+        switch (n) {
+          case 'Mars 2': return buildMarsSoviet(true);
+          case 'Mars 3': return buildMarsSoviet(false);
+          case 'Mars 6': return buildMarsSoviet(true);
+          case 'Viking 1': case 'Viking 2': return buildViking();
+          case 'Mars Pathfinder y Sojourner': return buildPathfinder();
+          case 'Mars Polar Lander y Deep Space 2': return buildMPL();
+          case 'Beagle 2': return buildBeagle2();
+          case 'Schiaparelli': return buildSchiaparelli();
+          case 'Spirit': case 'Opportunity': return buildMER();
+          case 'Phoenix': return buildPhoenixInsight(false);
+          case 'InSight': return buildPhoenixInsight(true);
+          case 'Curiosity': return buildCuriosity(false);
+          case 'Zhurong': return buildZhurong();
+          case 'Perseverance e Ingenuity': return buildCuriosity(true);
+        }
+        return null;
+      }
+
       function buildSite(parts, col) {
         const g = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ color: col, metalness: 0.6, roughness: 0.35 });
@@ -1994,7 +2312,7 @@
         else if (['Surveyor 1','Surveyor 3','Surveyor 5','Surveyor 6'].includes(st.n)) g = buildSurveyor5();
         else if (st.n === 'Apolo 11' || st.n === 'Apolo 12' || st.n === 'Apolo 14') g = buildApolloLM(false, true);
         else if (['Apolo 15','Apolo 16','Apolo 17'].includes(st.n)) g = buildApolloLM(true, true);
-        else g = buildSite(st.k, st.c);
+        else g = (st.b === 'M' && buildMarsModel(st.n)) || buildSite(st.k, st.c);
         const hit = new THREE.Mesh(new THREE.SphereGeometry(3, 8, 8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
         hit.position.y = 0.8; hit.userData.site = st; g.add(hit); siteHitboxes.push(hit);
         // faro de luz para encontrarlo desde lejos
@@ -2240,6 +2558,7 @@
       orbitLoop(earthObj.position.x, earthObj.position.y, earthObj.position.z, 520);
 
       // ---------- Cinturón de asteroides ----------
+      const rocasCinturon = [];   // x, y, z, tamaño de cada roca (para los choques)
       (function () {
         const N = 5000, belt = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0x8a7f73, roughness: 0.95, metalness: 0.05, flatShading: true }), N);
         const dummy = new THREE.Object3D(); let placed = 0, guard = 0;
@@ -2251,7 +2570,7 @@
           const s = 4 + Math.pow(Math.random(), 3) * 26;
           dummy.position.set(px, y, pz); dummy.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
           dummy.scale.set(s, s * (0.6 + Math.random() * 0.5), s * (0.7 + Math.random() * 0.5)); dummy.updateMatrix();
-          belt.setMatrixAt(placed++, dummy.matrix);
+          belt.setMatrixAt(placed++, dummy.matrix); rocasCinturon.push(px, y, pz, s);
         }
         belt.count = placed; scene.add(belt);
         // Cinturón de Kuiper (hielo y polvo, más allá de Neptuno)
@@ -2267,12 +2586,13 @@
       // ---------- Lunas decorativas de otros planetas ----------
       const moonTexSets = { gray: ['#8d8d8d', '#4d4d4d'], brown: ['#8a7a6a', '#4a3f35'], ocher: ['#b8a27a', '#6e5d3a'], ice: ['#c9d3e0', '#8fa0b5'] };
       const moonTexCache = {};
-      const getMoonTex = k => moonTexCache[k] || (moonTexCache[k] = generatePlanetTexture('craters', moonTexSets[k][0], moonTexSets[k][1]));
+      const getMoonTex = () => moonTexCache.l || (moonTexCache.l = generatePlanetTexture('luna'));
+      const moonTint = { gray: 0xffffff, brown: 0xd2b49a, ocher: 0xe8cf98, ice: 0xdde8f6 };
       const moonsDeco = [];
       [['Marte', 6, 150, 0.35, 'gray'], ['Marte', 4, 210, 0.22, 'brown'],
        ['Júpiter', 37, 1500, 0.05, 'ocher'], ['Júpiter', 32, 1800, 0.035, 'ice'], ['Júpiter', 53, 2200, 0.025, 'gray'], ['Júpiter', 49, 2700, 0.017, 'brown'],
        ['Saturno', 52, 1900, 0.02, 'ocher'], ['Saturno', 25, 2300, 0.015, 'ice'], ['Urano', 20, 800, 0.03, 'ice'], ['Neptuno', 28, 850, 0.03, 'ice']].forEach(d => {
-        const mesh = new THREE.Mesh(new THREE.SphereGeometry(d[1], 24, 24), new THREE.MeshStandardMaterial({ map: getMoonTex(d[4]), roughness: 0.9 }));
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(d[1], 24, 24), new THREE.MeshStandardMaterial({ map: getMoonTex(), color: moonTint[d[4]], roughness: 0.9 }));
         const m = { mesh, pl: planetObjects.find(p => p.name === d[0]), orb: d[2], speed: d[3], phase: Math.random() * Math.PI * 2, tilt: (Math.random() - 0.5) * 0.3 };
         scene.add(mesh); moonsDeco.push(m);
         decoColliders.push({ position: mesh.position, radius: d[1] });
@@ -2457,6 +2777,7 @@
           scene.add(mesh);
           meteorites.push({ mesh, base: new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(MD), vel: randDir().multiplyScalar(4 + Math.random() * 12), spin: randDir().multiplyScalar(0.2 + Math.random() * 0.6) });
           const col = { position: mesh.position, radius: r * 0.9 };
+          col.danio = true;   // los meteoritos dañan el casco
           decoColliders.push(col); cieloExtras.push(mesh); mesh.userData.col = col;
         }
       })();
@@ -2644,6 +2965,7 @@
       }
       canvas.addEventListener('click', (e) => {
         if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) return; // fue un arrastre de cámara
+        if (!muerte && clicEnMi(e)) { abrirEmotes(); return; }   // clic sobre ti mismo: emotes
         if (walk.active && !boarding) {   // clic sobre la nave: subir (si estás cerca)
           const r = canvas.getBoundingClientRect();
           raycaster.setFromCamera(mouseNDC.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
@@ -2691,6 +3013,7 @@
           _dir.normalize();
           ship.position.copy(c.position).addScaledVector(_dir, minDist);
           const vn = velocity.dot(_dir);
+          if (c.danio && vn < -4) golpe(-vn, 'rocas');
           if (vn < 0) velocity.addScaledVector(_dir, -vn); // cancela la velocidad que entra al sólido
         }
       }
@@ -2858,7 +3181,7 @@
         if (walk.active) { if (walk.near) interactNearest(); else triggerEveMessage(T('💬 No hay nadie cerca para hablar. Acércate a una misión.', '💬 Nobody nearby to talk to. Get close to a mission.')); }
       });
       bindTap(document.getElementById('mc-land'), () => onLandKey(false));
-      bindTap(document.getElementById('mc-turbo'), () => { keys.turbo = !keys.turbo; });
+      bindTap(document.getElementById('mc-turbo'), () => { if (walk.active) walk.pedirSalto = true; else keys.turbo = !keys.turbo; });
 
       // Arrastrar con el dedo sobre el canvas = girar la cámara (igual que con el mouse)
       let touchId = null, lastTouch = { x: 0, y: 0 };
@@ -2883,7 +3206,7 @@
                                       : (es ? '📱 Jugar en celular (botones)' : '📱 Play on mobile (buttons)');
         const L = (id, a, b) => { document.getElementById(id).textContent = es ? a : b; };
         L('mc-lbl-up', 'Subir', 'Up'); L('mc-lbl-down', 'Bajar', 'Down');
-        L('mc-lbl-interact', 'Interactuar', 'Interact'); L('mc-lbl-turbo', 'Turbo', 'Turbo');
+        L('mc-lbl-interact', 'Interactuar', 'Interact'); L('mc-lbl-turbo', walk.active ? 'Saltar' : 'Turbo', walk.active ? 'Jump' : 'Turbo');
         L('mc-lbl-land', walk.active ? 'A la nave' : 'Aterrizar', walk.active ? 'Board' : 'Land');
         lastHint = '';
       }
@@ -2919,14 +3242,20 @@
         const moving = mv.lengthSq() > 0;
         if (moving) {
           mv.normalize();
-          const ang = (keys.turbo ? 36 : 14) * dt / R;
+          const ang = 14 * dt / R;
           _q.setFromAxisAngle(_c.copy(up).cross(mv).normalize(), ang);
           walk.pos.applyQuaternion(_q); walk.fwd.applyQuaternion(_q);
           walk.face.lerp(mv.applyQuaternion(_q), Math.min(1, dt * 10));
-          walk.t += dt * (keys.turbo ? 14 : 9);
+          walk.t += dt * 9;
         }
         walk.pos.setLength(R);
         up.copy(walk.pos).normalize();
+        // Salto con la gravedad real de cada mundo (Espacio o el botón 🚀): en la Luna saltas mucho más alto
+        const g = G_PLANETA[walk.body.name] || 9.81;
+        if (walk.h === undefined) { walk.h = 0; walk.vh = 0; }
+        if (walk.pedirSalto && walk.h <= 0) walk.vh = 3.4;
+        walk.pedirSalto = false;
+        if (walk.h > 0 || walk.vh > 0) { walk.vh -= g * dt; walk.h = Math.max(0, walk.h + walk.vh * dt); if (walk.h === 0) walk.vh = 0; }
         walk.face.addScaledVector(up, -walk.face.dot(up));
         if (walk.face.lengthSq() < 1e-6) walk.face.copy(walk.fwd);
         walk.face.normalize();
@@ -2934,7 +3263,7 @@
         _b.copy(up).cross(_a).normalize();
         _m.makeBasis(_b, up, _a);
         astro.quaternion.setFromRotationMatrix(_m);
-        astro.position.copy(walk.pos);
+        astro.position.copy(walk.pos).addScaledVector(up, walk.h);
         const sw = moving ? Math.sin(walk.t) * 0.7 : 0, u = astro.userData;
         u.legL.rotation.x = sw; u.legR.rotation.x = -sw; u.armL.rotation.x = -sw * 0.8; u.armR.rotation.x = sw * 0.8;
         // misión cercana
@@ -2976,6 +3305,172 @@
         setHint(n.d < 40 ? (atPad ? T('🛬 Pulsa F para aterrizar en la plataforma de ' + n.b.name, '🛬 Press F to land on the ' + (PAD_NAMES_EN[n.b.name] || n.b.name) + ' landing pad') : T('🛬 Pulsa F para aterrizar en ' + n.b.name, '🛬 Press F to land on ' + n.b.name)) : '');
       }
 
+      // ================== PELIGROS: casco de la nave, el Sol, las rocas y la muerte ==================
+      // Gravedad real en la superficie (m/s²): sirve para el salto del astronauta
+      const G_PLANETA = { Mercurio: 3.7, Venus: 8.87, Tierra: 9.81, Marte: 3.71, 'Júpiter': 24.79, Saturno: 10.44, Urano: 8.69, Neptuno: 11.15, Luna: 1.62 };
+      let casco = 100, golpeCd = 0, muerte = null, avisoCalor = 0, avisoRocas = false, cuerpoPisado = null;
+      const uiCasco = document.createElement('div'); uiCasco.id = 'casco'; uiCasco.innerHTML = '<span class="l"></span><span class="b"><i></i></span><span class="v"></span>';
+      document.body.appendChild(uiCasco);
+      const flashGolpe = document.createElement('div'); flashGolpe.id = 'golpe-flash'; document.body.appendChild(flashGolpe);
+      const velCalor = document.createElement('div'); velCalor.id = 'calor'; document.body.appendChild(velCalor);
+      function pintarCasco() {
+        uiCasco.querySelector('.l').textContent = T('CASCO', 'HULL');
+        uiCasco.querySelector('i').style.width = casco + '%';
+        uiCasco.querySelector('.v').textContent = Math.round(casco) + ' %';
+        uiCasco.classList.toggle('bajo', casco < 35);
+        uiCasco.hidden = walk.active || !!muerte;
+      }
+      function golpe(v, causa) {
+        if (muerte || golpeCd > 0) return;
+        golpeCd = 0.5;
+        casco = Math.max(0, casco - Math.min(40, Math.max(6, v / 5)));
+        flashGolpe.classList.remove('on'); void flashGolpe.offsetWidth; flashGolpe.classList.add('on');
+        try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
+        if (!avisoRocas) { avisoRocas = true; triggerEveMessage(T('⚠️ ¡Cuidado! Los choques con rocas dañan el casco. Aterriza en un planeta o en la Luna para repararlo.', '⚠️ Careful! Hitting rocks damages the hull. Land on a planet or the Moon to repair it.')); }
+        if (casco <= 0) morir(causa || 'rocas');
+      }
+      // Choques con las rocas del cinturón de asteroides (entre Marte y Júpiter)
+      function chocarCinturon() {
+        const p = ship.position, r = Math.hypot(p.x, p.z);
+        if (r < 8850 || r > 10350 || Math.abs(p.y) > 400) return;
+        for (let i = 0; i < rocasCinturon.length; i += 4) {
+          const dx = p.x - rocasCinturon[i], dy = p.y - rocasCinturon[i + 1], dz = p.z - rocasCinturon[i + 2], R = rocasCinturon[i + 3] * .85 + 2.5;
+          if (Math.abs(dx) > R || Math.abs(dz) > R || Math.abs(dy) > R) continue;
+          const d = Math.hypot(dx, dy, dz);
+          if (d < R && d > 0) {
+            _dir.set(dx / d, dy / d, dz / d);
+            const vn = velocity.dot(_dir);
+            p.copy(_dir).multiplyScalar(R).add(_a.set(rocasCinturon[i], rocasCinturon[i + 1], rocasCinturon[i + 2]));
+            if (vn < 0) velocity.addScaledVector(_dir, -vn * 1.6);   // rebota
+            golpe(Math.max(30, -vn), 'rocas');
+          }
+        }
+      }
+      function morir(causa) {
+        muerte = { t: 0, causa, giro: new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3) };
+        for (const k in keys) keys[k] = false;
+        velocity.set(Math.random() - .5, Math.random() * .6, Math.random() - .5).normalize().multiplyScalar(causa === 'sol' ? 120 : 520);
+        if (causa === 'sol') { velCalor.style.opacity = 1; }
+        setHint('');
+      }
+      // La nave sale despedida girando; después, la pantalla negra con estrellas
+      function animarMuerte(dt) {
+        muerte.t += dt;
+        ship.position.addScaledVector(velocity, dt);
+        ship.rotation.x += muerte.giro.x * dt; ship.rotation.y += muerte.giro.y * dt; ship.rotation.z += muerte.giro.z * dt;
+        if (muerte.t > 1.7 && !muerte.pantalla) { muerte.pantalla = true; mostrarMuerte(muerte.causa); }
+      }
+      const pantallaMuerte = document.createElement('div'); pantallaMuerte.id = 'muerte'; pantallaMuerte.hidden = true;
+      pantallaMuerte.setAttribute('role', 'dialog'); pantallaMuerte.setAttribute('aria-modal', 'true');
+      pantallaMuerte.innerHTML = '<canvas aria-hidden="true"></canvas><div class="caja"><p class="eti"></p><h2></h2><p class="txt"></p><p class="dato"></p><button type="button"></button></div>';
+      document.body.appendChild(pantallaMuerte);
+      let rafMuerte = null;
+      function estrellasMuerte() {
+        const cv = pantallaMuerte.querySelector('canvas'), cx = cv.getContext('2d'), W = cv.width = innerWidth, H = cv.height = innerHeight;
+        const est = Array.from({ length: 260 }, () => [Math.random() * W, Math.random() * H, Math.random() * 1.6 + .3, Math.random() * 6]);
+        const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const paso = t => {
+          cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+          est.forEach(([x, y, r, f]) => { cx.globalAlpha = quieto ? .8 : .45 + .55 * Math.abs(Math.sin(t / 900 + f)); cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); });
+          cx.globalAlpha = 1;
+          if (!pantallaMuerte.hidden && !quieto) rafMuerte = requestAnimationFrame(paso);
+        };
+        paso(0);
+      }
+      const TEXTOS_MUERTE = () => ({
+        sol: [T('Te quemaste en el Sol ☀️', 'You burned up in the Sun ☀️'),
+              T('Te acercaste demasiado. La superficie del Sol está a unos 5.500 °C, y su corona, a más de un millón de grados. Ninguna nave puede tocarlo.', 'You got too close. The Sun\'s surface is about 5,500 °C and its corona is over a million degrees. No spacecraft can touch it.'),
+              T('Dato real: la sonda Parker Solar Probe, de la NASA, es la nave que más se ha acercado. Pasó a unos 6 millones de km de la superficie, protegida por un escudo de carbono que soporta cerca de 1.400 °C.', 'Real fact: NASA\'s Parker Solar Probe is the closest any spacecraft has come. It flew about 6 million km from the surface, protected by a carbon shield that withstands about 1,400 °C.')],
+        rocas: [T('Tu nave se destruyó 💥', 'Your ship was destroyed 💥'),
+                T('Chocaste muchas veces con rocas y el casco llegó a 0 %. La nave salió despedida y se perdió en el espacio.', 'You hit rocks too many times and the hull reached 0 %. The ship was flung away and lost in space.'),
+                T('Dato real: en el verdadero cinturón de asteroides, las rocas están separadas por cientos de miles de kilómetros. Pioneer 10 lo cruzó entre 1972 y 1973 sin chocar. En el juego están mucho más juntas para que sea un desafío.', 'Real fact: in the real asteroid belt, rocks are hundreds of thousands of kilometres apart. Pioneer 10 crossed it in 1972–1973 without a hit. In the game they are much closer together to make it a challenge.')]
+      });
+      function mostrarMuerte(causa) {
+        const tm = TEXTOS_MUERTE(), t = tm[causa] || tm.rocas;
+        pantallaMuerte.querySelector('.eti').textContent = T('Moriste', 'You died');
+        pantallaMuerte.querySelector('h2').textContent = t[0];
+        pantallaMuerte.querySelector('.txt').textContent = t[1];
+        pantallaMuerte.querySelector('.dato').textContent = t[2];
+        const b = pantallaMuerte.querySelector('button'); b.textContent = T('Volver a intentarlo', 'Try again');
+        b.onclick = reaparecer;
+        pantallaMuerte.hidden = false; estrellasMuerte(); b.focus();
+      }
+      function reaparecer() {
+        pantallaMuerte.hidden = true; cancelAnimationFrame(rafMuerte);
+        muerte = null; casco = 100; velCalor.style.opacity = 0; avisoCalor = 0;
+        ship.rotation.set(0, 0, 0); teleportToEarthPos = true;
+        triggerEveMessage(T('🛠️ Te traje de vuelta cerca de la Tierra, con la nave reparada. ¡Con más cuidado esta vez!', '🛠️ I brought you back near Earth with a repaired ship. Be more careful this time!'));
+      }
+      // Cada fotograma: Sol, rocas, reparación al aterrizar y aviso de gravedad
+      function peligros(dt) {
+        golpeCd = Math.max(0, golpeCd - dt);
+        if (walk.active) {
+          velCalor.style.opacity = 0;
+          if (cuerpoPisado !== walk.body) {
+            cuerpoPisado = walk.body;
+            const g = G_PLANETA[walk.body.name] || 9.81, rel = Math.round(g / 9.81 * 100);
+            setTimeout(() => triggerEveMessage(T('🪐 Gravedad en ' + ({ Luna: 'la Luna', Tierra: 'la Tierra' }[walk.body.name] || walk.body.name) + ': ' + String(g).replace('.', ',') + ' m/s² (' + rel + ' % de la de la Tierra). Pulsa Espacio para saltar y siéntela.' + (casco < 100 ? ' 🔧 Casco reparado.' : ''),
+              '🪐 Gravity on ' + walk.body.name + ': ' + g + ' m/s² (' + rel + ' % of Earth\'s). Press Space to jump and feel it.' + (casco < 100 ? ' 🔧 Hull repaired.' : ''))), 2600);
+            casco = 100;
+          }
+        } else {
+          cuerpoPisado = null;
+          if (!muerte) {
+            const dSol = ship.position.length() - sunRadius;
+            const calor = THREE.MathUtils.clamp(1 - dSol / 1500, 0, 1);
+            velCalor.style.opacity = (calor * .85).toFixed(3);
+            if (calor > .3 && avisoCalor < 1) { avisoCalor = 1; triggerEveMessage(T('🔥 ¡Hace muchísimo calor! Si sigues acercándote al Sol, la nave se quemará.', '🔥 It is extremely hot! If you keep getting closer to the Sun, the ship will burn.')); }
+            if (calor < .1) avisoCalor = 0;
+            if (dSol < 230) morir('sol');
+            else chocarCinturon();
+          }
+        }
+        pintarCasco();
+      }
+
+      // ================== EMOTES: clic en tu astronauta (o en tu nave) o tecla T ==================
+      const EMOTES = ['💀', '😭', '🔥', '✨', '🗿', '🫠', '🤙', '💅', '👀', '🫡', 'GG', 'slay'];
+      const panelEmotes = document.createElement('div'); panelEmotes.id = 'emotes'; panelEmotes.hidden = true;
+      panelEmotes.setAttribute('role', 'toolbar'); panelEmotes.setAttribute('aria-label', 'Emotes');
+      EMOTES.forEach(e => { const b = document.createElement('button'); b.type = 'button'; b.textContent = e; b.setAttribute('aria-label', 'Emote ' + e);
+        b.onclick = () => { lanzarEmote(e); panelEmotes.hidden = true; }; panelEmotes.appendChild(b); });
+      document.body.appendChild(panelEmotes);
+      const emotesVivos = [];
+      function lanzarEmote(txt) {
+        const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d');
+        const palabra = txt.length > 2;
+        if (palabra) { x.fillStyle = 'rgba(13,19,38,.85)'; x.beginPath(); x.roundRect ? x.roundRect(28, 24, 200, 80, 40) : x.rect(28, 24, 200, 80); x.fill(); }
+        x.font = palabra ? 'bold 52px Arial' : '92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+        x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#ffb84d'; x.fillText(txt, 128, 68);
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+        const sobre = walk.active ? astro : ship;
+        sp.scale.set(walk.active ? 3.2 : 9, walk.active ? 1.6 : 4.5, 1);
+        scene.add(sp); emotesVivos.push({ sp, sobre, t: 0 });
+      }
+      function animarEmotes(dt) {
+        for (let i = emotesVivos.length - 1; i >= 0; i--) {
+          const e = emotesVivos[i]; e.t += dt;
+          e.sobre.getWorldPosition(_hudP);
+          const up = walk.active && e.sobre === astro ? _d.copy(_hudP).sub(walk.body.sphere.getWorldPosition(_c)).normalize() : _d.set(0, 1, 0);
+          e.sp.position.copy(_hudP).addScaledVector(up, (walk.active ? 3.2 : 7) + e.t * 1.2);
+          e.sp.material.opacity = e.t < 2 ? 1 : Math.max(0, 1 - (e.t - 2) / .8);
+          if (e.t > 2.8) { scene.remove(e.sp); e.sp.material.map.dispose(); e.sp.material.dispose(); emotesVivos.splice(i, 1); }
+        }
+      }
+      function abrirEmotes() { panelEmotes.hidden = !panelEmotes.hidden; if (!panelEmotes.hidden) panelEmotes.querySelector('button').focus(); }
+      window.addEventListener('keydown', e => {
+        if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+        if ((e.key === 't' || e.key === 'T') && !e.repeat && !muerte) abrirEmotes();
+        if (e.code === 'Space' && walk.active && !e.repeat && !boarding) walk.pedirSalto = true;   // saltar
+        if (e.key === 'Escape') panelEmotes.hidden = true;
+      });
+      // Clic sobre tu astronauta o tu nave: abre los emotes
+      function clicEnMi(e) {
+        const r = canvas.getBoundingClientRect();
+        raycaster.setFromCamera(mouseNDC.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+        return raycaster.intersectObject(walk.active ? astro : ship, true).length > 0;
+      }
+
       function animate() {
         requestAnimationFrame(animate);
         const delta = Math.min(clock.getDelta(), 0.05);
@@ -3011,6 +3506,8 @@
           ship.position.copy(targetWorldPos);
           velocity.set(0, 0, 0);
           ship.rotation.set(0, ship.rotation.y + delta * 0.1, 0);
+        } else if (muerte) {
+          animarMuerte(delta);
         } else {
           const turboActive = !!keys.turbo;
           const boost = flightBoost();   // más rápido en el espacio abierto, normal cerca de planetas
@@ -3044,6 +3541,7 @@
           }
         }
 
+        peligros(delta); animarEmotes(delta);
         const dp = walk.active ? astro.getWorldPosition(_hudP) : ship.position;
         posX.textContent = dp.x.toFixed(1);
         posY.textContent = dp.y.toFixed(1);
@@ -3066,6 +3564,8 @@
         // Actualizar entorno
         sunGroup.rotation.y += delta * 0.02;
         planetObjects.forEach(p => { p.sphere.rotation.y += delta * p.rotSpeed; });
+        if (window.__nubesTierra) { window.__nubesTierra.rotation.y += delta * 0.006; window.__nubesTierra.visible = !(walk.active && walk.body === earthObj); }
+        planetObjects.forEach(p => p.group.children.forEach(ch => { if (ch.userData.atmo) ch.visible = !(walk.active && walk.body === p); }));   // desde el suelo no se ve el borde de la atmósfera   // caminando en la Tierra, las nubes quedan arriba
         stars.rotation.y += delta * 0.0003;
 
         const displayedSpeed = Math.round(velocity.length() * 120);
@@ -3089,6 +3589,10 @@
         cieloExtras.forEach(o => { o.visible = !on; if (o.userData.col) o.userData.col.off = on; });
         if (on) meteors.forEach(m => { m.line.visible = false; });
       };
+      // Ayudas para pruebas: lista de planetas y apuntar la nave hacia un punto
+      window.__peligro = { estado: () => ({ casco, muerte: !!muerte }), velocity, rocas: rocasCinturon };
+      window.__planetas = planetObjects; window.__posLuna = () => earthMoonGroup.position;
+      window.__mirar = v => { const f = v.clone().sub(ship.position).normalize(); cameraAngleY = -Math.asin(f.y); cameraAngleX = Math.atan2(-f.x, -f.z); velocity.set(0, 0, 0); };
       window.__juego = { ship, astro, walk, camera, takeOff: () => { if (walk.active) takeOff(); }, aterrizar: () => { if (!walk.active) toggleLanding(); },
         // Viajar desde el archivo: la nave aterriza a un lado de la máquina y el astronauta queda junto a ella
         aterrizarEn: (i) => {

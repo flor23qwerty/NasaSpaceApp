@@ -23,7 +23,8 @@ Todo empieza de noche en el **Observatorio de Characato** (Arequipa, Perú), en 
 |---|---|
 | W A S D / flechas | Volar o caminar |
 | Q / E | Bajar / subir (volando) |
-| Espacio | Turbo |
+| Espacio | Turbo (volando) · saltar (caminando) |
+| T o clic en tu astronauta | Emotes |
 | F | Subir a la nave (junto a ella) / aterrizar |
 | E | Hablar con la máquina cercana (caminando) |
 | Ratón | Arrastrar para girar la cámara |
@@ -33,6 +34,13 @@ En pantallas táctiles aparecen botones automáticamente.
 ## Escala del sistema solar
 
 Los tamaños y distancias están a escala semi-real comprimida: el Sol es mucho más grande que los planetas, Júpiter y Saturno son gigantes y el cinturón de asteroides queda entre Marte y Júpiter. Las distancias están muy reducidas para que se pueda volar; por eso la nave acelera sola en el espacio abierto y frena cerca de los planetas.
+
+## Peligros y física
+
+- **Gravedad real:** al caminar, el salto depende de la gravedad de cada mundo (Luna 1,62 m/s², Marte 3,71, Tierra 9,81, Júpiter 24,79…). En la Luna se salta unas 6 veces más alto que en la Tierra.
+- **Casco de la nave:** los choques con rocas del cinturón de asteroides y con meteoritos bajan la resistencia. Al aterrizar en un planeta o en la Luna, el casco se repara.
+- **El Sol quema:** al acercarse, la pantalla se calienta y EVE avisa; si sigues, la nave se quema.
+- **Pantalla de muerte:** negra con estrellas, explica por qué moriste con un dato real (por ejemplo, la sonda Parker Solar Probe) y te devuelve cerca de la Tierra.
 
 ## Minijuegos
 

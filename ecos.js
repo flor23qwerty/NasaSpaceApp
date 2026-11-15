@@ -308,6 +308,10 @@ window.toggleSitesPanel = function () {
 window.openSitePanel = st => openEcho(echoFromSite(st));
 window.openLuna2Panel = () => openEcho(echoLuna2());
 
+/* Sin menú del clic derecho ni "guardar imagen" al mantener pulsado (salvo para escribir) */
+document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); });
+document.addEventListener('dragstart', e => { if (e.target && e.target.tagName === 'IMG') e.preventDefault(); });
+
 /* Botón "?" y controles que se esconden solos */
 const help = document.createElement('button');
 help.id = 'e-help'; help.type = 'button'; help.textContent = '?';
