@@ -2693,6 +2693,7 @@
         const p = document.getElementById('pads-panel');
         let h = '<button class="panel-close" onclick="closePanel(\'pads-panel\')" aria-label="Cerrar">✕</button><h3>' + T('🛬 PLATAFORMAS DE ATERRIZAJE', '🛬 LANDING PADS') + '</h3>';
         pads.forEach((pd, i) => { h += '<button class="site-btn" onclick="goToPad(' + i + ')">' + pd.emoji + ' ' + (currentLang === 'es' ? pd.es : pd.en) + '</button>'; });
+        h += '<h3>' + T('✨ DESTINOS ESPECIALES', '✨ SPECIAL PLACES') + '</h3><button class="site-btn" onclick="irAuroras()">🌌 ' + T('Auroras · Tromsø (Noruega)', 'Auroras · Tromsø (Norway)') + '</button>';
         p.innerHTML = h;
       };
       window.togglePadsPanel = function () {
@@ -3553,6 +3554,97 @@
         if (walk.pos.angleTo(sueloCentro) > sueloAng * .35) crearSuelo(walk.body, walk.pos);   // te alejaste: se vuelve a centrar
       }
 
+      // ================== AURORAS DE LA TIERRA ==================
+      // Las auroras aparecen cerca de los polos: partículas del Sol chocan con el oxígeno del aire
+      // a unos 100–250 km de altura y lo hacen brillar en verde (y en morado, más arriba).
+      function texturaAurora(n) {
+        const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const x = c.getContext('2d');
+        for (let i = 0; i < 1024; i++) {
+          const a = .4 + .6 * Math.abs(Math.sin(i * .045 + n) * Math.sin(i * .013 + 1.3 + n));
+          const g = x.createLinearGradient(0, 256, 0, 0);
+          g.addColorStop(0, 'rgba(60,255,130,0)'); g.addColorStop(.1, 'rgba(60,255,130,' + a + ')'); g.addColorStop(.45, 'rgba(50,240,140,' + (a * .55) + ')');
+          g.addColorStop(.78, 'rgba(190,70,255,' + (a * .3) + ')'); g.addColorStop(1, 'rgba(190,70,255,0)');
+          x.fillStyle = g; x.fillRect(i, 0, 1, 256);
+        }
+        // los extremos se desvanecen (sin bordes rectos)
+        x.globalCompositeOperation = 'destination-in';
+        const h = x.createLinearGradient(0, 0, 1024, 0); h.addColorStop(0, 'rgba(0,0,0,0)'); h.addColorStop(.15, 'rgba(0,0,0,1)'); h.addColorStop(.85, 'rgba(0,0,0,1)'); h.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = h; x.fillRect(0, 0, 1024, 256);
+        const t = new THREE.CanvasTexture(c); t.wrapS = THREE.ClampToEdgeWrapping; return t;
+      }
+      // 1) Vista desde el espacio: un anillo fino y discreto alrededor de cada polo (el "óvalo auroral", ~67° de latitud)
+      const auroraAnillos = [];
+      {
+        const R = earthObj.radius, tex = texturaAurora(0); tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = 6;
+        const t2 = texturaAurora(.7); t2.wrapS = THREE.RepeatWrapping; t2.repeat.x = 6;
+        for (const s of [1, -1]) {
+          const m = new THREE.Mesh(new THREE.CylinderGeometry(R * .405, R * .39, R * .05, 128, 1, true),
+            new THREE.MeshBasicMaterial({ map: s > 0 ? tex : t2, transparent: true, opacity: .9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+          m.position.y = s * R * .935; if (s < 0) m.rotation.x = Math.PI;
+          earthObj.group.add(m); auroraAnillos.push(m);
+        }
+      }
+      // 2) Desde el suelo: cortinas que ondulan en el cielo, cerca de Tromsø (Noruega, 69,65° N, 18,96° E)
+      const TROMSO = [69.65, 18.96 + 90];   // +90° por cómo se envuelve el mapa en la esfera (igual que la plataforma de Arequipa)
+      const dirLatLon = (la, lo) => { la *= Math.PI / 180; lo *= Math.PI / 180; return new THREE.Vector3(Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)); };
+      const tromsoDir = dirLatLon(TROMSO[0], TROMSO[1]);
+      const cortinas = new THREE.Group(); cortinas.visible = false; earthObj.sphere.add(cortinas);
+      {
+        const R = earthObj.radius, up = tromsoDir.clone(), norte = new THREE.Vector3(0, 1, 0).addScaledVector(up, -up.y).normalize(), este = norte.clone().cross(up).normalize();
+        const base = up.clone().multiplyScalar(R);
+        [[70, 12, 200, 46, 0], [110, 18, 260, 60, 1.5], [150, 22, 300, 70, 3]].forEach(([dist, alto0, ancho, alto, f]) => {
+          const geo = new THREE.PlaneGeometry(ancho, alto, 96, 1);
+          const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: texturaAurora(f), transparent: true, opacity: 0, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+          m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(este, up, norte.clone().negate()));
+          m.position.copy(base).addScaledVector(norte, dist).addScaledVector(up, alto0 + alto / 2);
+          m.userData.f = f; m.userData.x0 = Float32Array.from({ length: geo.attributes.position.count }, (_, i) => geo.attributes.position.getX(i));
+          cortinas.add(m);
+        });
+      }
+      let auroraAviso = false, auroraBrillo = 0;
+      function animarAuroras(dt, t) {
+        auroraAnillos.forEach((m, i) => { m.material.map.offset.x = (t * (i ? -.004 : .005)) % 1; m.visible = !(walk.active && walk.body === earthObj); });
+        // ¿es de noche donde está el astronauta? (el Sol bajo el horizonte)
+        let objetivo = 0;
+        if (walk.active && walk.body === earthObj) {
+          const lejos = walk.pos.clone().normalize().angleTo(tromsoDir);
+          earthObj.sphere.getWorldQuaternion(_q);
+          const arriba = _a.copy(walk.pos).normalize().applyQuaternion(_q), alSol = _b.copy(earthObj.position).negate().normalize();
+          const elev = arriba.dot(alSol);
+          if (lejos < .45 && elev < .05) objetivo = THREE.MathUtils.clamp((.05 - elev) * 4, 0, 1);
+          if (lejos < .45 && !auroraAviso) {
+            auroraAviso = true; const deNoche = objetivo > 0;
+            setTimeout(() => triggerEveMessage(deNoche
+              ? T('🌌 ¡Mira el cielo! Partículas del Sol chocan con el oxígeno del aire a unos 100–250 km de altura y lo hacen brillar en verde. Por eso las auroras salen cerca de los polos.', '🌌 Look at the sky! Particles from the Sun hit oxygen in the air about 100–250 km up and make it glow green. That is why auroras appear near the poles.')
+              : T('☀️ En Tromsø ahora es de día. Las auroras solo se ven de noche: espera a que la Tierra gire.', '☀️ It is daytime in Tromsø now. Auroras can only be seen at night: wait for the Earth to turn.')), 9000);   // después del aviso de gravedad
+          }
+        } else auroraAviso = false;
+        auroraBrillo += (objetivo - auroraBrillo) * Math.min(1, dt * 2.5);
+        cortinas.visible = auroraBrillo > .01;
+        if (!cortinas.visible) return;
+        cortinas.children.forEach(m => {   // las cortinas ondulan despacio
+          const pos = m.geometry.attributes.position, f = m.userData.f;
+          for (let i = 0; i < pos.count; i++) { const X = m.userData.x0[i]; pos.setZ(i, Math.sin(X * .035 + f + t * .35) * 14 + Math.sin(X * .011 + f * 2 - t * .2) * 20); }
+          pos.needsUpdate = true;
+          m.material.opacity = auroraBrillo * (.75 + .25 * Math.sin(t * .8 + f));
+        });
+      }
+      // Destino especial: ir a ver las auroras. Al llegar, la Tierra se coloca para que en Tromsø sea medianoche.
+      window.irAuroras = function () {
+        if (walk.active) takeOff();
+        const noche = earthObj.position.clone().normalize();
+        earthObj.sphere.rotation.y = Math.atan2(noche.x, noche.z) - Math.atan2(tromsoDir.x, tromsoDir.z);
+        earthObj.sphere.updateWorldMatrix(true, true);
+        const w = earthObj.sphere.localToWorld(tromsoDir.clone().multiplyScalar(earthObj.radius));
+        _b.copy(w).sub(earthObj.position).normalize();
+        ship.position.copy(w).addScaledVector(_b, 20);
+        velocity.set(0, 0, 0); isParkedOnMoon = false;
+        document.getElementById('pads-panel').classList.remove('active');
+        auroraAviso = false; land(earthObj, true);
+        walk.fwd.copy(new THREE.Vector3(0, 1, 0).addScaledVector(tromsoDir, -tromsoDir.y).normalize()); walk.face.copy(walk.fwd);   // mirando al norte
+        cameraAngleY = -0.45;   // la cámara mira hacia el cielo
+      };
+
       function animate() {
         requestAnimationFrame(animate);
         const delta = Math.min(clock.getDelta(), 0.05);
@@ -3623,7 +3715,7 @@
           }
         }
 
-        peligros(delta); animarEmotes(delta); actualizarSuelo();
+        peligros(delta); animarEmotes(delta); actualizarSuelo(); animarAuroras(delta, clock.getElapsedTime());
         const dp = walk.active ? astro.getWorldPosition(_hudP) : ship.position;
         posX.textContent = dp.x.toFixed(1);
         posY.textContent = dp.y.toFixed(1);

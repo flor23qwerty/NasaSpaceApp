@@ -39,6 +39,7 @@ Los tamaños y distancias están a escala semi-real comprimida: el Sol es mucho 
 
 - **La Tierra usa el mapa real "Blue Marble" de la NASA.** Los demás planetas tienen texturas que el juego dibuja al abrirse, inspiradas en fotos reales: las franjas de Júpiter y su Gran Mancha Roja, la División de Cassini en los anillos de Saturno, los casquetes polares de Marte y los mares de la Luna.
 - **La plataforma de la Tierra está en Characato, Arequipa**, en sus coordenadas reales: el jugador aparece donde empieza la historia.
+- **Auroras:** desde el espacio, un anillo fino alrededor de cada polo (el óvalo auroral). En el menú de plataformas, el destino especial **Auroras · Tromsø (Noruega)** te deja allí a medianoche, mirando al cielo, con cortinas de aurora que ondulan y la explicación de EVE.
 - **Suelo de cerca:** al caminar por la Tierra, la Luna, Marte o Mercurio, alrededor del astronauta aparece un suelo con más detalle (piedras, polvo, cráteres pequeños y matas secas), que se mezcla con el mapa del planeta a lo lejos.
 
 ## Peligros y física
