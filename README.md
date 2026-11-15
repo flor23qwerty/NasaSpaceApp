@@ -73,6 +73,7 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 | `ecos.js` | La capa "Ecos del Silencio": receptor, historias, minijuegos, archivo, cielo limpio y "¿dónde está mi nave?". Comentado en español. |
 | `intro.js` | La intro: Characato de noche, la terminal con comandos y el teletransporte. |
 | `ecos.css` | Estilo visual de todo el juego. |
+| `lsp.js`, `lsp/` | Deletreo en Lengua de Señas Peruana del nombre de cada máquina. Usa fotos de las manos que pone el equipo (ver `lsp/LEEME.md`); sin fotos no aparece. |
 | `musica.mp3` | Música de fondo. |
 | `videos/` | Recortes de 4 s de videos de la NASA (MP4 y WebM). |
 

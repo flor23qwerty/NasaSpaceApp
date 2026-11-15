@@ -226,3 +226,12 @@ body.mobile-mode #e-ship{top:auto;bottom:calc(270px + env(safe-area-inset-bottom
 .rx-fotos figure{margin:0}
 .rx-fotos img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#05080f;border:1px solid var(--e-line)}
 .rx-fotos figcaption{font-size:12px;line-height:1.4;color:var(--e-muted);margin-top:6px}
+
+/* ---------- Deletreo en LSP (lsp.js) ---------- */
+.rx-lsp{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px;margin-top:8px}
+.rx-lsp[hidden]{display:none}
+.rx-lsp figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.rx-lsp img{width:40px;height:40px;object-fit:contain;border-radius:4px;background:rgba(255,255,255,.06)}
+.rx-lsp figcaption{font:500 10px var(--e-mono);color:var(--e-muted)}
+.rx-lsp .esp{width:10px}
+.rx-lsp .cr{flex-basis:100%;margin:2px 0 0;font-size:11px;color:var(--e-muted)}
