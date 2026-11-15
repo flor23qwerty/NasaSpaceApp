@@ -1,5 +1,7 @@
 # Deletreo en Lengua de Señas Peruana (LSP)
 
+Ya están las 29 letras del alfabeto (A–Z, Ñ, LL y RR) en esta carpeta, con la letra dibujada en cada imagen. LL y RR se usan como una sola letra al deletrear.
+
 El juego puede deletrear con las manos el nombre de cada máquina, en la parte de arriba del receptor. La opción se activa desde el menú (☰ → 🤟 Deletreo en LSP). **Solo aparece cuando hay fotos en esta carpeta.**
 
 ## Cómo hacer las fotos

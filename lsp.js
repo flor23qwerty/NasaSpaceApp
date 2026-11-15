@@ -36,13 +36,17 @@ function deletrear() {
   fila.innerHTML = ''; fila.hidden = !activo || !nombre;
   if (fila.hidden) return;
   fila.setAttribute('aria-label', tx('Nombre deletreado en Lengua de Señas Peruana', 'Name fingerspelled in Peruvian Sign Language'));
-  for (const ch of nombre) {
-    if (ch === ' ') { const sp = document.createElement('span'); sp.className = 'esp'; fila.appendChild(sp); continue; }
-    const f = LETRAS[clave(ch)]; if (!f) continue;   // números, signos o letras sin foto: se saltan
-    const fig = document.createElement('figure'), img = document.createElement('img'), cap = document.createElement('figcaption');
-    img.src = 'lsp/' + f; img.alt = ''; img.loading = 'lazy'; cap.textContent = ch.toUpperCase();
+  // En el alfabeto de la LSP, LL y RR son letras propias
+  const letras = nombre.match(/ll|rr|[\s\S]/g) || [];
+  for (const ch of letras) {
+    if (/\s/.test(ch)) { if (!fila.lastChild || fila.lastChild.className === 'esp') continue; const sp = document.createElement('span'); sp.className = 'esp'; fila.appendChild(sp); continue; }
+    const f = LETRAS[ch.length === 2 ? ch : clave(ch)]; if (!f) continue;   // números, signos o letras sin imagen: se saltan
+    const fig = document.createElement('figure'), img = document.createElement('img');
+    img.src = 'lsp/' + f; img.alt = ch.toUpperCase(); img.loading = 'lazy';
     img.onerror = () => fig.remove();
-    fig.append(img, cap); fila.appendChild(fig);
+    fig.appendChild(img);
+    if (!window.LSP_CON_LETRA) { const cap = document.createElement('figcaption'); cap.textContent = ch.toUpperCase(); fig.appendChild(cap); }
+    fila.appendChild(fig);
   }
   if (window.LSP_CREDITO) { const c = document.createElement('p'); c.className = 'cr'; c.textContent = tx('Señas: ', 'Signs: ') + window.LSP_CREDITO; fila.appendChild(c); }
 }
