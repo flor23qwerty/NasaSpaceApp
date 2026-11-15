@@ -2646,7 +2646,7 @@
       // ---------- Plataformas de aterrizaje ----------
       const PAD_NAMES_EN = { 'Mercurio': 'Mercury', 'Venus': 'Venus', 'Tierra': 'Earth', 'Marte': 'Mars', 'Júpiter': 'Jupiter', 'Saturno': 'Saturn', 'Urano': 'Uranus', 'Neptuno': 'Neptune', 'Luna': 'Moon' };
       const PAD_EMOJI = { 'Mercurio': '⚫', 'Venus': '🟡', 'Tierra': '🌍', 'Marte': '🔴', 'Júpiter': '🟠', 'Saturno': '🪐', 'Urano': '🔵', 'Neptuno': '🔷', 'Luna': '🌙' };
-      const PAD_LATLON = { 'Marte': [35, -100], 'Luna': [55, 120] };
+      const PAD_LATLON = { 'Marte': [35, -100], 'Luna': [55, 120], 'Tierra': [-16.47, 18.51] };   // Tierra: Characato, Arequipa (16,47° S, 71,49° O; +90° por cómo se envuelve el mapa en la esfera)
       const padTex = (function () {
         const c = document.createElement('canvas'); c.width = c.height = 512; const x = c.getContext('2d');
         x.fillStyle = '#0c1a2e'; x.beginPath(); x.arc(256, 256, 256, 0, Math.PI * 2); x.fill();
@@ -3471,6 +3471,88 @@
         return raycaster.intersectObject(walk.active ? astro : ship, true).length > 0;
       }
 
+      // ================== TIERRA REAL Y SUELO DE CERCA ==================
+      // Mapa real de la Tierra: "Blue Marble", de NASA Visible Earth (dominio público).
+      // Mientras carga (o si falla) se ve la textura dibujada por el juego.
+      new THREE.TextureLoader().load('texturas/tierra.jpg', t => {
+        t.anisotropy = 8;
+        earthObj.sphere.material.map = t; earthObj.sphere.material.needsUpdate = true;
+      });
+
+      // Suelo de cerca: una "alfombra" curva con más detalle alrededor del astronauta,
+      // que se desvanece hacia los bordes y se mezcla con el mapa del planeta.
+      function texturaSuelo(tipo) {
+        const N = 512, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d');
+        const P = {
+          tierra: { base: '#7a6a55', manchas: ['rgba(140,120,92,.35)', 'rgba(92,78,62,.35)', 'rgba(110,104,70,.25)'], piedra: ['#9a8c78', '#5d5246', '#b8ab95'], matas: true },
+          luna: { base: '#77777a', manchas: ['rgba(150,150,152,.3)', 'rgba(70,70,74,.3)'], piedra: ['#a9a9ab', '#4e4e52', '#c4c4c6'], crateres: true },
+          marte: { base: '#a2512c', manchas: ['rgba(190,104,62,.35)', 'rgba(120,56,32,.35)', 'rgba(170,90,52,.3)'], piedra: ['#6e3a24', '#3f2318', '#b06a44'] },
+          roca: { base: '#6e6762', manchas: ['rgba(140,132,124,.3)', 'rgba(60,56,52,.3)'], piedra: ['#9d958d', '#45403c'], crateres: true }
+        }[tipo];
+        x.fillStyle = P.base; x.fillRect(0, 0, N, N);
+        // Dibuja algo repetido en los bordes para que la textura no tenga costuras
+        const envolver = (cx, cy, r, f) => { for (const dx of [-N, 0, N]) for (const dy of [-N, 0, N]) if (cx + dx > -r && cx + dx < N + r && cy + dy > -r && cy + dy < N + r) f(cx + dx, cy + dy); };
+        for (let i = 0; i < 260; i++) {
+          const cx = Math.random() * N, cy = Math.random() * N, r = 10 + Math.random() * 60, col = P.manchas[i % P.manchas.length];
+          envolver(cx, cy, r, (a, b) => { const g = x.createRadialGradient(a, b, 0, a, b, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(a - r, b - r, r * 2, r * 2); });
+        }
+        if (P.crateres) for (let i = 0; i < 26; i++) {
+          const cx = Math.random() * N, cy = Math.random() * N, r = 6 + Math.pow(Math.random(), 2) * 30;
+          envolver(cx, cy, r + 4, (a, b) => {
+            const g = x.createRadialGradient(a + r * .2, b + r * .2, r * .1, a, b, r); g.addColorStop(0, 'rgba(40,40,44,.45)'); g.addColorStop(.8, 'rgba(40,40,44,.25)'); g.addColorStop(.95, 'rgba(230,230,232,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+            x.fillStyle = g; x.beginPath(); x.arc(a, b, r, 0, 7); x.fill(); });
+        }
+        for (let i = 0; i < 900; i++) {   // piedritas con sombra
+          const cx = Math.random() * N, cy = Math.random() * N, r = .8 + Math.pow(Math.random(), 4) * 7, col = P.piedra[i % P.piedra.length];
+          envolver(cx, cy, r + 3, (a, b) => {
+            x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(a + r * .5, b + r * .45, r, r * .7, 0, 0, 7); x.fill();
+            x.fillStyle = col; x.beginPath(); x.ellipse(a, b, r, r * .75, Math.random() * 3, 0, 7); x.fill(); });
+        }
+        if (P.matas) for (let i = 0; i < 70; i++) {   // matas secas, como en la campiña de Arequipa
+          const cx = Math.random() * N, cy = Math.random() * N;
+          envolver(cx, cy, 10, (a, b) => { x.strokeStyle = i % 3 ? 'rgba(120,118,60,.8)' : 'rgba(150,138,80,.8)'; x.lineWidth = 1.4;
+            for (let k = 0; k < 7; k++) { const an = -Math.PI / 2 + (Math.random() - .5) * 1.6, l = 4 + Math.random() * 6; x.beginPath(); x.moveTo(a, b); x.lineTo(a + Math.cos(an) * l, b + Math.sin(an) * l); x.stroke(); } });
+        }
+        const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t;
+      }
+      const SUELO_TIPO = { Tierra: 'tierra', Luna: 'luna', Marte: 'marte', Mercurio: 'roca' };   // en Venus y los gigantes gaseosos no hay suelo de cerca
+      const sueloTex = {};
+      const sueloMat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      sueloMat.onBeforeCompile = sh => {   // el borde se desvanece poco a poco
+        sh.vertexShader = 'attribute float fade;\nvarying float vFade;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = fade;');
+        sh.fragmentShader = 'varying float vFade;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vFade;');
+      };
+      let suelo = null, sueloCuerpo = null, sueloCentro = new THREE.Vector3(), sueloAng = 0;
+      function crearSuelo(body, centro) {
+        const tipo = SUELO_TIPO[body.name]; if (!tipo) return;
+        const R = body.radius, ang = Math.min(34 / R, .65), seg = 72, anillos = 30;
+        const geo = new THREE.SphereGeometry(R + .03, seg, anillos, 0, Math.PI * 2, 0, ang);
+        const q = new THREE.Quaternion().setFromUnitVectors(Y_AXIS, centro.clone().normalize());
+        const pos = geo.attributes.position, uv = geo.attributes.uv, n = pos.count, fade = new Float32Array(n), v = new THREE.Vector3();
+        const lonC = Math.atan2(centro.x, centro.z), reps = Math.round(2 * Math.PI * R / 7), k = reps / (2 * Math.PI);   // una baldosa cada ~7 m
+        for (let i = 0; i < n; i++) {
+          v.fromBufferAttribute(pos, i).applyQuaternion(q); pos.setXYZ(i, v.x, v.y, v.z);
+          // coordenadas ancladas al planeta (longitud/latitud): el suelo no "camina" contigo
+          let lon = Math.atan2(v.x, v.z) - lonC; lon -= Math.round(lon / (2 * Math.PI)) * 2 * Math.PI;
+          const lat = Math.asin(THREE.MathUtils.clamp(v.y / (R + .03), -1, 1));
+          uv.setXY(i, (lonC + lon) * k, lat * k);
+          const d = v.clone().normalize().angleTo(centro.clone().normalize()) / ang;
+          fade[i] = 1 - THREE.MathUtils.smoothstep(d, .45, 1);
+        }
+        geo.setAttribute('fade', new THREE.BufferAttribute(fade, 1)); geo.computeVertexNormals();
+        if (!sueloTex[tipo]) sueloTex[tipo] = texturaSuelo(tipo);
+        if (suelo) { suelo.parent.remove(suelo); suelo.geometry.dispose(); }
+        sueloMat.map = sueloTex[tipo]; sueloMat.needsUpdate = true;
+        suelo = new THREE.Mesh(geo, sueloMat); suelo.renderOrder = 1;
+        body.sphere.add(suelo); sueloCuerpo = body; sueloCentro.copy(centro); sueloAng = ang;
+      }
+      function actualizarSuelo() {
+        if (!walk.active) { if (suelo) suelo.visible = false; return; }
+        if (sueloCuerpo !== walk.body || !suelo) { if (suelo) { suelo.parent.remove(suelo); suelo = null; } sueloCuerpo = null; crearSuelo(walk.body, walk.pos); return; }
+        suelo.visible = true;
+        if (walk.pos.angleTo(sueloCentro) > sueloAng * .35) crearSuelo(walk.body, walk.pos);   // te alejaste: se vuelve a centrar
+      }
+
       function animate() {
         requestAnimationFrame(animate);
         const delta = Math.min(clock.getDelta(), 0.05);
@@ -3541,7 +3623,7 @@
           }
         }
 
-        peligros(delta); animarEmotes(delta);
+        peligros(delta); animarEmotes(delta); actualizarSuelo();
         const dp = walk.active ? astro.getWorldPosition(_hudP) : ship.position;
         posX.textContent = dp.x.toFixed(1);
         posY.textContent = dp.y.toFixed(1);

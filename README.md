@@ -35,6 +35,12 @@ En pantallas táctiles aparecen botones automáticamente.
 
 Los tamaños y distancias están a escala semi-real comprimida: el Sol es mucho más grande que los planetas, Júpiter y Saturno son gigantes y el cinturón de asteroides queda entre Marte y Júpiter. Las distancias están muy reducidas para que se pueda volar; por eso la nave acelera sola en el espacio abierto y frena cerca de los planetas.
 
+## Planetas y suelo
+
+- **La Tierra usa el mapa real "Blue Marble" de la NASA.** Los demás planetas tienen texturas que el juego dibuja al abrirse, inspiradas en fotos reales: las franjas de Júpiter y su Gran Mancha Roja, la División de Cassini en los anillos de Saturno, los casquetes polares de Marte y los mares de la Luna.
+- **La plataforma de la Tierra está en Characato, Arequipa**, en sus coordenadas reales: el jugador aparece donde empieza la historia.
+- **Suelo de cerca:** al caminar por la Tierra, la Luna, Marte o Mercurio, alrededor del astronauta aparece un suelo con más detalle (piedras, polvo, cráteres pequeños y matas secas), que se mezcla con el mapa del planeta a lo lejos.
+
 ## Peligros y física
 
 - **Gravedad real:** al caminar, el salto depende de la gravedad de cada mundo (Luna 1,62 m/s², Marte 3,71, Tierra 9,81, Júpiter 24,79…). En la Luna se salta unas 6 veces más alto que en la Tierra.
@@ -91,6 +97,7 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 | `lsp.js`, `lsp/` | Deletreo en Lengua de Señas Peruana del nombre de cada máquina. Usa fotos de las manos que pone el equipo (ver `lsp/LEEME.md`); sin fotos no aparece. |
 | `facil.js` | Versión de lectura fácil de cada máquina (3 frases cortas con íconos). |
 | `datos_equipo.js` | Base de datos del equipo: datos extra de 14 misiones, y qué imágenes, video y sonidos de `media/` muestra cada una. |
+| `texturas/` | Mapa real de la Tierra ("Blue Marble", NASA Visible Earth, dominio público). |
 | `media/` | Imágenes, diagramas, la animación de Sojourner y dos sonidos reales de la NASA (la voz de Armstrong y el viento de Marte). |
 | `musica.mp3` | Música de fondo. |
 | `videos/` | Recortes de 4 s de videos de la NASA (MP4 y WebM). |
