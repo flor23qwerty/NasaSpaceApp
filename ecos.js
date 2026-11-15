@@ -404,7 +404,10 @@ function showTune() {
     'There is a very faint echo. Move the dial until your wave matches the ghost wave and the noise disappears.');
   body.querySelector('label span').textContent = tx('Frecuencia del receptor', 'Receiver frequency');
   const cv = body.querySelector('canvas'), c = cv.getContext('2d'), inp = $('#rx-freq'), lock = $('#rx-lock');
-  let held = 0, last = performance.now(), done = false; const t0 = last;
+  let held = 0, last = performance.now(), done = false, nivel = -1; const t0 = last;
+  // Sin sonido también se puede: el borde de la pantalla brilla más cuanto más cerca estás,
+  // y en el celular vibra cada vez que la señal mejora de nivel.
+  const vibrar = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
   inp.focus();
   const step = now => {
     const dt = (now - last) / 1000; last = now;
@@ -422,10 +425,13 @@ function showTune() {
     for (let x = 0; x <= 900; x += 4) { const y = 150 + Math.sin(x / 900 * Math.PI * 2 * f + ph * f) * 90 * (.4 + .6 * clean) + (Math.random() - .5) * noise; x ? c.lineTo(x, y) : c.moveTo(x, y); }
     c.stroke();
     setAudio(1 - clean, clean, 220 + f * 60);
+    cv.style.setProperty('--brillo', clean.toFixed(3));
+    const n = err < 0.1 ? 3 : err < 0.5 ? 2 : err < 1.2 ? 1 : 0;
+    if (n !== nivel) { if (n > nivel && nivel >= 0) vibrar(20 + n * 30); nivel = n; cv.dataset.nivel = n; }
     if (!done) {
       if (err < 0.1) {
         held += dt; lock.className = 'rx-lock ok'; lock.textContent = tx('Señal fijada… mantén el dial quieto', 'Signal locked… hold the dial still');
-        if (held > 0.7) { done = true; beep(880, .25); lock.textContent = tx('Eco recuperado', 'Echo recovered'); setTimeout(() => { if (cur) showStory(false); }, 500); }
+        if (held > 0.7) { done = true; beep(880, .25); vibrar([80, 60, 160]); cv.dataset.nivel = 4; lock.textContent = tx('Eco recuperado', 'Echo recovered'); setTimeout(() => { if (cur) showStory(false); }, 500); }
       } else {
         held = 0; lock.className = 'rx-lock';
         lock.textContent = err < 0.5 ? tx('¡Cerca! Ajusta despacio', 'Close! Adjust slowly') : err < 1.2 ? tx('Se oye algo…', 'Something is there…') : tx('Buscando señal…', 'Searching for a signal…');
@@ -437,12 +443,24 @@ function showTune() {
 }
 
 /* Fase 2: escuchar */
+let lecturaFacil = false;
+try { lecturaFacil = localStorage.getItem('ecos3d-facil') === 'si'; } catch (e) {}
 function showStory(already) {
   stopLoop(); setPhase(1); const it = cur;
-  body.innerHTML = '<div class="rx-clip"></div><p class="rx-voice" id="rx-voice" aria-live="polite"></p><div class="rx-prog" id="rx-prog"></div>' +
+  const facil = ES() && window.LECTURA_FACIL && window.LECTURA_FACIL[it.name];
+  const modoFacil = !!(facil && lecturaFacil);
+  body.innerHTML = '<div class="rx-clip"></div>' +
+    (facil ? '<div class="rx-modo" role="group"><button type="button" data-m="0"></button><button type="button" data-m="1"></button></div>' : '') +
+    '<p class="rx-voice" id="rx-voice" aria-live="polite"></p><div class="rx-prog" id="rx-prog"></div>' +
     '<p class="rx-note"></p><div class="rx-actions"><button class="rx-btn ghost" id="rx-voz" type="button" hidden></button><button class="rx-btn ghost" id="rx-skip" type="button"></button><button class="rx-btn" id="rx-next" type="button" hidden></button></div>' +
     '<dl class="rx-facts" id="rx-facts" hidden></dl><p class="rx-src" id="rx-src" hidden></p><section class="rx-fotos" id="rx-fotos" hidden></section>';
   montarClip(body.querySelector('.rx-clip'), it);
+  if (facil) {   // selector "Historia completa / Lectura fácil"
+    const [b0, b1] = body.querySelectorAll('.rx-modo button');
+    b0.textContent = 'Historia completa'; b1.textContent = 'Aa Lectura fácil';
+    [b0, b1].forEach(b => { const on = (b.dataset.m === '1') === modoFacil; b.setAttribute('aria-pressed', on); b.onclick = () => {
+      if (on) return; lecturaFacil = b.dataset.m === '1'; try { localStorage.setItem('ecos3d-facil', lecturaFacil ? 'si' : 'no'); } catch (e) {} showStory(already); }; });
+  }
   body.querySelector('.rx-note').textContent = tx('Narración imaginada a partir de datos reales de la misión.', 'Imagined narration based on real mission data.');
   $('#rx-next').textContent = already ? tx('Repetir el desafío', 'Replay the challenge') : tx('Ir al desafío', 'Go to the challenge');
   const v = $('#rx-voice'), skip = $('#rx-skip'), reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -461,7 +479,7 @@ function showStory(already) {
   };
   const reveal = () => {
     skip.hidden = true;
-    const dl = $('#rx-facts'); dl.hidden = false;
+    const dl = $('#rx-facts'); dl.hidden = modoFacil;   // en lectura fácil no se repite la ficha larga
     it.facts.forEach(([k, val]) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = val; dl.append(dt, dd); });
     const s = $('#rx-src'); s.hidden = false; s.textContent = tx('Fuente: ', 'Source: ');
     const a = document.createElement('a'); a.href = it.src[1]; a.target = '_blank'; a.rel = 'noopener'; a.textContent = it.src[0]; s.appendChild(a);
@@ -471,6 +489,14 @@ function showStory(already) {
   skip.onclick = () => { if (timer) finishLine(); else if (line < it.story.length - 1) { line++; startLine(); } };
   $('#rx-next').onclick = () => showChallenge();
   cleanup.push(() => clearInterval(timer));
+  if (modoFacil) {   // 3 frases cortas con íconos, sin efecto de máquina de escribir
+    v.className = 'rx-facil'; v.removeAttribute('aria-live'); $('#rx-prog').hidden = true;
+    const ul = document.createElement('ul'); ul.className = 'rx-facil';
+    facil.forEach(([ic, txt]) => { const li = document.createElement('li'), i = document.createElement('span'); i.className = 'ic'; i.setAttribute('aria-hidden', 'true'); i.textContent = ic; li.append(i, document.createTextNode(txt)); ul.appendChild(li); });
+    v.replaceWith(ul);
+    montarVoz($('#rx-voz'), { story: facil.map(f => f[1]) });
+    reveal(); return;
+  }
   montarVoz($('#rx-voz'), it);
   startLine(); skip.focus();
 }

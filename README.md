@@ -65,6 +65,12 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 - **Historias detalladas:** unas 27 misiones lunares tienen un relato largo en primera persona (`MISSION_STORIES`, en `index.html`).
 - **Modelos 3D detallados** de 17 tipos de naves lunares (Apolo con LRV y ALSEP, Surveyor, Lunojod, Luna 9 y 24, Chang'e, Chandrayaan, SLIM, Odysseus, Athena, Blue Ghost, Beresheet). Están inspirados en fotos y esquemas; no son escaneos.
 
+## Accesibilidad
+
+- **Lectura fácil:** en "Escuchar", cada máquina se puede leer en 3 frases cortas con íconos (`facil.js`). Ayuda a quienes leen el español como segunda lengua (muchas personas sordas usan primero la Lengua de Señas Peruana), a niños pequeños y a quien prefiere leer poco. El juego recuerda la elección.
+- **Sintonizar sin sonido:** el borde de la pantalla del receptor brilla más cuanto más cerca está la frecuencia, y en el celular vibra cada vez que la señal mejora.
+- **Lengua de Señas Peruana:** el nombre del jugador se deletrea en la terminal de la intro, y el nombre de cada máquina se puede deletrear en el receptor (menú ☰ → 🤟 Deletreo en LSP).
+
 ## Archivos
 
 | Archivo | Qué contiene |
@@ -74,6 +80,7 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 | `intro.js` | La intro: Characato de noche, la terminal con comandos y el teletransporte. |
 | `ecos.css` | Estilo visual de todo el juego. |
 | `lsp.js`, `lsp/` | Deletreo en Lengua de Señas Peruana del nombre de cada máquina. Usa fotos de las manos que pone el equipo (ver `lsp/LEEME.md`); sin fotos no aparece. |
+| `facil.js` | Versión de lectura fácil de cada máquina (3 frases cortas con íconos). |
 | `musica.mp3` | Música de fondo. |
 | `videos/` | Recortes de 4 s de videos de la NASA (MP4 y WebM). |
 

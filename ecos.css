@@ -242,3 +242,18 @@ body.mobile-mode #e-ship{top:auto;bottom:calc(270px + env(safe-area-inset-bottom
 .term-lsp img{height:54px;width:auto;border-radius:3px;filter:invert(1) sepia(1) saturate(5) hue-rotate(70deg) brightness(1.1)}
 .term-lsp .esp{width:12px}
 @media (max-width:600px){.term-lsp img{height:42px}}
+
+/* ---------- Sintonizar sin sonido: el borde brilla más cuanto más cerca ---------- */
+.rx-scope{transition:box-shadow .15s,border-color .3s;box-shadow:0 0 calc(var(--brillo,0) * 26px) rgba(255,184,77,calc(var(--brillo,0) * .5))}
+.rx-scope[data-nivel="3"],.rx-scope[data-nivel="4"]{border-color:var(--e-signal);box-shadow:0 0 26px rgba(128,220,198,.55)}
+
+/* ---------- Lectura fácil ---------- */
+.rx-modo{display:inline-flex;align-self:flex-start;border:1px solid var(--e-line);border-radius:999px;padding:3px;gap:2px}
+.rx-modo button{font:500 .85rem var(--e-body);background:none;color:var(--e-muted);border:0;border-radius:999px;padding:6px 14px;cursor:pointer;min-height:34px}
+.rx-modo button[aria-pressed="true"]{background:var(--e-panel-2);color:var(--e-ink);box-shadow:inset 0 0 0 1px var(--e-amber)}
+ul.rx-facil{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+ul.rx-facil li{display:flex;align-items:center;gap:14px;font-size:21px;line-height:1.35;font-weight:700}
+ul.rx-facil .ic{flex:none;width:48px;height:48px;display:grid;place-items:center;font-size:26px;border-radius:12px;background:var(--e-panel-2);border:1px solid var(--e-line)}
+@media (max-width:640px){ul.rx-facil li{font-size:18px}ul.rx-facil .ic{width:40px;height:40px;font-size:22px}}
+/* Lo que está oculto (atributo hidden) siempre se oculta dentro del receptor */
+#e-overlay [hidden]{display:none!important}
