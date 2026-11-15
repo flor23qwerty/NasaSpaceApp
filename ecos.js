@@ -455,6 +455,7 @@ function showStory(already) {
     '<p class="rx-note"></p><div class="rx-actions"><button class="rx-btn ghost" id="rx-voz" type="button" hidden></button><button class="rx-btn ghost" id="rx-skip" type="button"></button><button class="rx-btn" id="rx-next" type="button" hidden></button></div>' +
     '<dl class="rx-facts" id="rx-facts" hidden></dl><p class="rx-src" id="rx-src" hidden></p><section class="rx-fotos" id="rx-fotos" hidden></section>';
   montarClip(body.querySelector('.rx-clip'), it);
+  montarSonido(body.querySelector('.rx-clip'), it);
   if (facil) {   // selector "Historia completa / Lectura fácil"
     const [b0, b1] = body.querySelectorAll('.rx-modo button');
     b0.textContent = 'Historia completa'; b1.textContent = 'Aa Lectura fácil';
@@ -480,7 +481,9 @@ function showStory(already) {
   const reveal = () => {
     skip.hidden = true;
     const dl = $('#rx-facts'); dl.hidden = modoFacil;   // en lectura fácil no se repite la ficha larga
-    it.facts.forEach(([k, val]) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = val; dl.append(dt, dd); });
+    // Datos extra de la base del equipo (datos_equipo.js), sin repetir filas
+    const extra = ((window.FICHAS_EQUIPO || {})[it.name] || []).filter(([k]) => !it.facts.some(f => f[0] === k));
+    it.facts.concat(extra).forEach(([k, val]) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = val; dl.append(dt, dd); });
     const s = $('#rx-src'); s.hidden = false; s.textContent = tx('Fuente: ', 'Source: ');
     const a = document.createElement('a'); a.href = it.src[1]; a.target = '_blank'; a.rel = 'noopener'; a.textContent = it.src[0]; s.appendChild(a);
     const n = $('#rx-next'); n.hidden = false; n.focus();
@@ -499,6 +502,21 @@ function showStory(already) {
   }
   montarVoz($('#rx-voz'), it);
   startLine(); skip.focus();
+}
+
+/* ---------- Sonido real de la misión (media/), con su transcripción siempre visible ---------- */
+function montarSonido(clip, it) {
+  const m = (window.MEDIA_EQUIPO || {})[it.name]; if (!m || !m.audio) return;
+  const [src, titulo, texto] = m.audio;
+  const box = document.createElement('div'); box.className = 'rx-sonido';
+  box.innerHTML = '<p class="t"></p><audio controls preload="none"></audio><p class="tr"></p>';
+  box.querySelector('.t').textContent = '🎧 ' + titulo;
+  box.querySelector('.tr').textContent = texto;
+  const au = box.querySelector('audio'); au.src = 'media/' + src;
+  au.onplay = () => { try { bgAudio.volume = 0.05; } catch (e) {} };
+  au.onpause = au.onended = () => { try { if (!overlay.hidden) bgAudio.volume = 0.25; } catch (e) {} };
+  clip.insertAdjacentElement('afterend', box);
+  cleanup.push(() => au.pause());
 }
 
 /* ---------- Narración en voz alta (síntesis de voz del navegador) ----------
@@ -569,16 +587,28 @@ async function fotosNasa(it, host) {
   const pintar = (fotos) => {
     if (!host.isConnected || !fotos.length) return;
     host.hidden = false; host.innerHTML = '';
-    const h = document.createElement('h3'); h.textContent = tx('Fotos reales · archivo de la NASA', 'Real photos · NASA archive'); host.appendChild(h);
+    const h = document.createElement('h3'); h.textContent = tx('Imágenes de la misión · NASA', 'Mission images · NASA'); host.appendChild(h);
     const grid = document.createElement('div'); grid.className = 'rx-fotos-grid'; host.appendChild(grid);
     fotos.forEach(f => {
-      const fig = document.createElement('figure'), img = document.createElement('img'), cap = document.createElement('figcaption');
+      const fig = document.createElement('figure'), cap = document.createElement('figcaption');
+      if (f.video) {   // secuencia animada en bucle (sin sonido)
+        const v = document.createElement('video'); v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.setAttribute('aria-label', f.t);
+        ['webm', 'mp4'].forEach(ext => { const so = document.createElement('source'); so.src = f.video + '.' + ext; so.type = 'video/' + ext; v.appendChild(so); });
+        cap.textContent = f.t + ' · NASA'; fig.append(v, cap); grid.appendChild(fig); return;
+      }
+      const img = document.createElement('img');
       img.src = f.src; img.alt = f.t; img.loading = 'lazy'; img.onerror = () => { fig.remove(); if (!grid.children.length) host.hidden = true; };
       const a = document.createElement('a'); a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.appendChild(img);
       cap.textContent = f.t + (f.cr ? ' · ' + f.cr : ''); fig.append(a, cap); grid.appendChild(fig);
     });
   };
-  if (fotoCache[nombre]) return pintar(fotoCache[nombre]);
+  // Primero las imágenes propias del equipo (media/): cargan siempre, incluso sin internet
+  const m = (window.MEDIA_EQUIPO || {})[nombre] || {};
+  const propias = (m.video ? [{ video: 'media/' + m.video[0], t: m.video[1] }] : [])
+    .concat((m.img || []).map(([f, t]) => ({ src: 'media/' + f, t, cr: 'NASA', link: 'media/' + f })));
+  const pintarTodo = api => pintar(propias.concat(api.slice(0, Math.max(2, 6 - propias.length))));
+  if (propias.length) pintar(propias);
+  if (fotoCache[nombre]) return pintarTodo(fotoCache[nombre]);
   const fotos = [], vistos = new Set();
   if (nombre === 'Luna 24') {   // foto curada del archivo LROC (NASA/GSFC/Arizona State University)
     fotos.push({ src: 'https://lroc.im-ldi.com/news/uploads/LROCiotw/luna24_rev_fig.png', link: 'https://lroc.im-ldi.com/images/461',
@@ -604,7 +634,7 @@ async function fotosNasa(it, host) {
       }
     } catch (e) { /* sin internet o la NASA no respondió: no se muestra nada */ }
   }
-  fotoCache[nombre] = fotos; pintar(fotos);
+  fotoCache[nombre] = fotos; pintarTodo(fotos);
 }
 
 /* ==========================================================================

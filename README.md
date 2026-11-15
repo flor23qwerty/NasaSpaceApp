@@ -62,6 +62,7 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 
 - **Escuchar en voz alta:** en la fase "Escuchar", un botón lee la historia de la máquina con la voz del navegador. La música baja mientras habla.
 - **Fotos reales:** al terminar la historia aparecen hasta 4 fotos del archivo de imágenes de la NASA ([images.nasa.gov](https://images.nasa.gov)) que mencionan esa misión. Luna 24 muestra una foto de la cámara LROC. Si no hay internet o la NASA no tiene fotos, la sección no aparece.
+- **Base de datos del equipo:** 14 misiones (Surveyor 3, Apolo 11, 12 y 15, Pathfinder, Spirit, Opportunity, Viking 1, InSight, Ingenuity, NEAR, Dawn, Kepler y Pioneer 10) suman filas a su ficha, imágenes propias y, en Apolo 11 e InSight, un sonido real con su transcripción.
 - **Historias detalladas:** unas 27 misiones lunares tienen un relato largo en primera persona (`MISSION_STORIES`, en `index.html`).
 - **Modelos 3D detallados** de 17 tipos de naves lunares (Apolo con LRV y ALSEP, Surveyor, Lunojod, Luna 9 y 24, Chang'e, Chandrayaan, SLIM, Odysseus, Athena, Blue Ghost, Beresheet). Están inspirados en fotos y esquemas; no son escaneos.
 
@@ -81,6 +82,8 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 | `ecos.css` | Estilo visual de todo el juego. |
 | `lsp.js`, `lsp/` | Deletreo en Lengua de Señas Peruana del nombre de cada máquina. Usa fotos de las manos que pone el equipo (ver `lsp/LEEME.md`); sin fotos no aparece. |
 | `facil.js` | Versión de lectura fácil de cada máquina (3 frases cortas con íconos). |
+| `datos_equipo.js` | Base de datos del equipo: datos extra de 14 misiones, y qué imágenes, video y sonidos de `media/` muestra cada una. |
+| `media/` | Imágenes, diagramas, la animación de Sojourner y dos sonidos reales de la NASA (la voz de Armstrong y el viento de Marte). |
 | `musica.mp3` | Música de fondo. |
 | `videos/` | Recortes de 4 s de videos de la NASA (MP4 y WebM). |
 
