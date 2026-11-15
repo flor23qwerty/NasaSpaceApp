@@ -236,3 +236,9 @@ body.mobile-mode #e-ship{top:auto;bottom:calc(270px + env(safe-area-inset-bottom
 .rx-lsp figcaption{font:500 10px var(--e-mono);color:var(--e-muted)}
 .rx-lsp .esp{width:10px}
 .rx-lsp .cr{flex-basis:100%;margin:2px 0 0;font-size:11px;color:var(--e-muted)}
+
+/* Nombre del jugador en LSP dentro de la terminal (manos en verde) */
+.term-lsp{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end;padding:4px 0 6px;text-shadow:none}
+.term-lsp img{height:54px;width:auto;border-radius:3px;filter:invert(1) sepia(1) saturate(5) hue-rotate(70deg) brightness(1.1)}
+.term-lsp .esp{width:12px}
+@media (max-width:600px){.term-lsp img{height:42px}}

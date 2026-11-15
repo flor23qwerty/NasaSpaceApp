@@ -155,6 +155,24 @@ function ponerChips() {
   chips.innerHTML = '';
   ['ayuda', 'escanear', 'observatorio', 'señal', 'nave', 'eve', 'aceptar'].forEach(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = k; if (k === 'aceptar') b.className = 'go'; b.onclick = () => ejecutar(k); chips.appendChild(b); });
 }
+/* El nombre del jugador deletreado en Lengua de Señas Peruana (imágenes de lsp/) */
+async function nombreEnSenas(n) {
+  const L = window.LSP_LETRAS || {};
+  const letras = (n.toLowerCase().match(/ll|rr|[\s\S]/g) || []).map(ch => ch.length === 2 ? ch : ch === 'ñ' ? 'enie' : ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  if (!letras.some(k => L[k])) return;
+  await decir(['Así se deletrea tu nombre en Lengua de Señas Peruana:'], 'tip');
+  const fila = document.createElement('div'); fila.className = 'tl term-lsp'; fila.setAttribute('role', 'img');
+  fila.setAttribute('aria-label', n + ', deletreado en Lengua de Señas Peruana');
+  out.appendChild(fila);
+  for (const k of letras) {
+    if (/\s/.test(k)) { if (fila.lastChild && fila.lastChild.className !== 'esp') { const e = document.createElement('span'); e.className = 'esp'; fila.appendChild(e); } continue; }
+    if (!L[k]) continue;
+    const img = document.createElement('img'); img.src = 'lsp/' + L[k]; img.alt = ''; img.onerror = () => img.remove();
+    img.onload = () => { out.scrollTop = out.scrollHeight; };
+    fila.appendChild(img); out.scrollTop = out.scrollHeight;
+    await new Promise(r => setTimeout(r, reduce ? 0 : 160));
+  }
+}
 async function ejecutar(raw) {
   if (ocupado || fase === 'fin') return;
   const v = raw.trim(); if (!v) return;
@@ -163,7 +181,9 @@ async function ejecutar(raw) {
     nombre = v.replace(/[<>]/g, '').slice(0, 16);
     try { localStorage.setItem(KEY_NOMBRE, nombre); } catch (e) {}
     fase = 'cmd'; ov.querySelector('#term-prompt').textContent = nombre.toLowerCase().replace(/\s+/g, '') + '@characato:~$';
-    await decir(['Operador registrado: ' + nombre.toUpperCase(), 'Hola, ' + nombre + '. Este observatorio recibió ' + contar().total + ' señales del espacio y necesita a alguien que las escuche.', 'Explora con comandos. Escribe "ayuda" para verlos, o "aceptar" cuando estés listo.']);
+    await decir(['Operador registrado: ' + nombre.toUpperCase()]);
+    await nombreEnSenas(nombre);
+    await decir(['Hola, ' + nombre + '. Este observatorio recibió ' + contar().total + ' señales del espacio y necesita a alguien que las escuche.', 'Explora con comandos. Escribe "ayuda" para verlos, o "aceptar" cuando estés listo.']);
     ponerChips(); input.setAttribute('aria-label', 'Escribe un comando'); return;
   }
   const k = ALIAS[v.toLowerCase()] || v.toLowerCase();
