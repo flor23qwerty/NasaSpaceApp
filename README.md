@@ -58,6 +58,13 @@ Al empezar "Escuchar", cada máquina muestra un clip de lo que hizo:
 - **Animación** para las 47 máquinas, dibujada en el propio juego.
 - **Video real de la NASA** en 9 de ellas (Apolo 11, Apolo 12, Surveyor 3, Apolo 15, Ingenuity, Phoenix, Opportunity, InSight y Dawn). Son recortes de 4 s de [images.nasa.gov](https://images.nasa.gov) (dominio público), en la carpeta `videos/`, en MP4 y WebM. En esas máquinas se puede cambiar entre la animación y el video.
 
+## Narración, fotos y modelos
+
+- **Escuchar en voz alta:** en la fase "Escuchar", un botón lee la historia de la máquina con la voz del navegador. La música baja mientras habla.
+- **Fotos reales:** al terminar la historia aparecen hasta 4 fotos del archivo de imágenes de la NASA ([images.nasa.gov](https://images.nasa.gov)) que mencionan esa misión. Luna 24 muestra una foto de la cámara LROC. Si no hay internet o la NASA no tiene fotos, la sección no aparece.
+- **Historias detalladas:** unas 27 misiones lunares tienen un relato largo en primera persona (`MISSION_STORIES`, en `index.html`).
+- **Modelos 3D detallados** de 17 tipos de naves lunares (Apolo con LRV y ALSEP, Surveyor, Lunojod, Luna 9 y 24, Chang'e, Chandrayaan, SLIM, Odysseus, Athena, Blue Ghost, Beresheet). Están inspirados en fotos y esquemas; no son escaneos.
+
 ## Archivos
 
 | Archivo | Qué contiene |

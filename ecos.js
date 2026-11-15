@@ -219,7 +219,10 @@ const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.f
 /* Convierte cualquier eco (sitio 3D, Luna 2 o espacio profundo) en una ficha para el receptor */
 function echoFromSite(st) {
   const c = CUSTOM[st.n];
-  if (c && ES()) return Object.assign({ id: 'site:' + st.n, name: st.n }, c);
+  // Si hay una historia detallada (MISSION_STORIES, en index.html), se usa su relato y su ficha
+  const ms = typeof MISSION_STORIES !== 'undefined' && MISSION_STORIES[st.n];
+  const largo = ms ? { story: [strip(ms.sub)].concat(ms.paras.map(strip)), facts: ms.card.map(r => [r[0], strip(r[1])]) } : {};
+  if (c && ES()) return Object.assign({ id: 'site:' + st.n, name: st.n }, c, largo);
   const s = siteStory(st)[ES() ? 'es' : 'en'];
   const g = SITE_GROUPS[st.g];
   // Pregunta automática: ¿para qué fue enviada? (opciones de otras misiones)
@@ -437,8 +440,8 @@ function showTune() {
 function showStory(already) {
   stopLoop(); setPhase(1); const it = cur;
   body.innerHTML = '<div class="rx-clip"></div><p class="rx-voice" id="rx-voice" aria-live="polite"></p><div class="rx-prog" id="rx-prog"></div>' +
-    '<p class="rx-note"></p><div class="rx-actions"><button class="rx-btn ghost" id="rx-skip" type="button"></button><button class="rx-btn" id="rx-next" type="button" hidden></button></div>' +
-    '<dl class="rx-facts" id="rx-facts" hidden></dl><p class="rx-src" id="rx-src" hidden></p>';
+    '<p class="rx-note"></p><div class="rx-actions"><button class="rx-btn ghost" id="rx-voz" type="button" hidden></button><button class="rx-btn ghost" id="rx-skip" type="button"></button><button class="rx-btn" id="rx-next" type="button" hidden></button></div>' +
+    '<dl class="rx-facts" id="rx-facts" hidden></dl><p class="rx-src" id="rx-src" hidden></p><section class="rx-fotos" id="rx-fotos" hidden></section>';
   montarClip(body.querySelector('.rx-clip'), it);
   body.querySelector('.rx-note').textContent = tx('Narración imaginada a partir de datos reales de la misión.', 'Imagined narration based on real mission data.');
   $('#rx-next').textContent = already ? tx('Repetir el desafío', 'Replay the challenge') : tx('Ir al desafío', 'Go to the challenge');
@@ -463,11 +466,119 @@ function showStory(already) {
     const s = $('#rx-src'); s.hidden = false; s.textContent = tx('Fuente: ', 'Source: ');
     const a = document.createElement('a'); a.href = it.src[1]; a.target = '_blank'; a.rel = 'noopener'; a.textContent = it.src[0]; s.appendChild(a);
     const n = $('#rx-next'); n.hidden = false; n.focus();
+    fotosNasa(it, $('#rx-fotos'));
   };
   skip.onclick = () => { if (timer) finishLine(); else if (line < it.story.length - 1) { line++; startLine(); } };
   $('#rx-next').onclick = () => showChallenge();
   cleanup.push(() => clearInterval(timer));
+  montarVoz($('#rx-voz'), it);
   startLine(); skip.focus();
+}
+
+/* ---------- Narración en voz alta (síntesis de voz del navegador) ----------
+   Lee toda la historia de la máquina. Mientras habla, la música baja casi a cero. */
+function montarVoz(btn, it) {
+  if (!('speechSynthesis' in window)) return;
+  const ss = window.speechSynthesis; let hablando = false;
+  const etiqueta = () => { btn.textContent = hablando ? tx('■ Detener voz', '■ Stop voice') : tx('🔊 Escuchar en voz alta', '🔊 Read aloud'); };
+  const fin = () => { hablando = false; etiqueta(); try { if (!overlay.hidden) bgAudio.volume = 0.25; } catch (e) {} };
+  btn.hidden = false; etiqueta();
+  btn.onclick = () => {
+    if (hablando) { ss.cancel(); fin(); return; }
+    ss.cancel();
+    const u = new SpeechSynthesisUtterance(it.story.join(' … '));
+    u.lang = ES() ? 'es-PE' : 'en-US'; u.rate = 0.9; u.pitch = 0.8;
+    const voces = ss.getVoices(), pref = ES() ? /^es/i : /^en/i;
+    const voz = voces.find(v => /es-PE/i.test(v.lang) && ES()) || voces.find(v => pref.test(v.lang));
+    if (voz) u.voice = voz;
+    u.onend = fin; u.onerror = fin;
+    try { bgAudio.volume = 0.05; } catch (e) {}
+    hablando = true; etiqueta(); ss.speak(u);
+  };
+  cleanup.push(() => { if (hablando) { ss.cancel(); fin(); } });
+}
+
+/* ---------- Fotos reales del archivo de la NASA (images.nasa.gov) ----------
+   Busca fotos de la misión y muestra solo las que mencionan su nombre.
+   Si no hay internet o la NASA no responde, la sección no aparece. */
+const FOTO_Q = {
+  'Luna 2': ['Luna 2 Soviet lunar probe'], 'Luna 9': ['Luna 9 spacecraft', 'Luna 9 Soviet lunar probe'],
+  'Lunokhod 1': ['Lunokhod 1 rover', 'Luna 17 Lunokhod 1'], 'Lunokhod 2': ['Lunokhod 2 rover', 'Luna 21 Lunokhod'],
+  "Chang'e 3 y Yutu": ["Chang'e 3 lander Yutu rover", 'Yutu rover lunar surface'], "Chang'e 5": ["Chang'e 5 lunar sample return mission"],
+  "Chang'e 4 y Yutu-2": ["Chang'e 4 lander Yutu-2", 'Von Karman crater Chang\'e 4'], "Chang'e 6": ["Chang'e 6 lander far side LRO"],
+  'Apolo 11': ['Apollo 11 lunar module Eagle', 'Apollo 11 lunar surface'], 'Apolo 12': ['Apollo 12 lunar module Intrepid', 'Apollo 12 Surveyor 3'],
+  'Apolo 14': ['Apollo 14 lunar module Antares', 'Apollo 14 ALSEP'], 'Apolo 15': ['Apollo 15 lunar rover Hadley', 'Apollo 15 Falcon lunar module'],
+  'Apolo 16': ['Apollo 16 lunar rover Descartes', 'Apollo 16 Orion lunar module'], 'Apolo 17': ['Apollo 17 Challenger lunar module', 'Apollo 17 lunar rover Taurus Littrow'],
+  'Surveyor 1': ['Surveyor 1 lunar lander'], 'Surveyor 3': ['Surveyor 3 lunar lander', 'Apollo 12 Surveyor 3'], 'Surveyor 5': ['Surveyor 5 lunar lander'],
+  'Surveyor 6': ['Surveyor 6 lunar lander'], 'Surveyor 7': ['Surveyor 7 lunar lander', 'Surveyor 7 Tycho'],
+  'SLIM': ['SLIM lunar lander JAXA', 'SLIM LEV-2 SORA-Q Moon'], 'IM-1 Odysseus': ['IM-1 Odysseus lunar lander', 'Odysseus Nova-C'],
+  'IM-2 Athena': ['IM-2 Athena lunar lander', 'Athena Nova-C Mons Mouton'], 'Blue Ghost 1': ['Blue Ghost lunar lander Firefly', 'Blue Ghost Mare Crisium'],
+  'Luna 24': ['Luna 24 Soviet lunar mission'], 'Chandrayaan-2 (restos)': ['Vikram Chandrayaan-2 impact site LRO'],
+  'Chandrayaan-3 (Vikram y Pragyan)': ['Chandrayaan-3 Vikram Pragyan'], 'Beresheet': ['Beresheet lunar lander LRO', 'Beresheet impact site'],
+  'Mars 2': ['Mars 2 Soviet lander'], 'Mars 3': ['Mars 3 Soviet lander'], 'Mars 6': ['Mars 6 Soviet Mars lander'],
+  'Viking 1': ['Viking 1 Mars lander', 'Viking 1 Mars surface'], 'Viking 2': ['Viking 2 Mars lander', 'Viking 2 Mars surface'],
+  'Mars Pathfinder y Sojourner': ['Mars Pathfinder Sojourner rover'], 'Mars Polar Lander y Deep Space 2': ['Mars Polar Lander', 'Deep Space 2 Mars'],
+  'Beagle 2': ['Beagle 2 Mars lander'], 'Schiaparelli': ['Schiaparelli ExoMars lander'],
+  'Spirit': ['Mars Exploration Rover Spirit'], 'Opportunity': ['Mars Exploration Rover Opportunity'], 'Phoenix': ['Phoenix Mars lander'],
+  'InSight': ['InSight Mars lander'], 'Curiosity': ['Curiosity rover Mars'], 'Zhurong': ['Zhurong Mars rover', 'Tianwen-1 Zhurong'],
+  'Perseverance e Ingenuity': ['Perseverance rover Mars', 'Ingenuity helicopter Mars'],
+  'NEAR Shoemaker': ['NEAR Shoemaker Eros'], 'Dawn': ['Dawn spacecraft Vesta Ceres'], 'Kepler': ['Kepler space telescope'], 'Pioneer 10': ['Pioneer 10 spacecraft']
+};
+const FOTO_T = {
+  'Luna 2': ['luna 2'], 'Luna 9': ['luna 9', 'luna-9'], 'Lunokhod 1': ['lunokhod 1', 'luna 17'], 'Lunokhod 2': ['lunokhod 2', 'luna 21'],
+  "Chang'e 3 y Yutu": ["chang'e 3", 'yutu'], "Chang'e 5": ["chang'e 5"], "Chang'e 4 y Yutu-2": ["chang'e 4", 'yutu-2'], "Chang'e 6": ["chang'e 6"],
+  'SLIM': ['slim', 'sora-q', 'lev-2'], 'IM-1 Odysseus': ['odysseus', 'im-1'], 'IM-2 Athena': ['athena', 'im-2'], 'Blue Ghost 1': ['blue ghost'],
+  'Chandrayaan-2 (restos)': ['vikram', 'chandrayaan-2'], 'Chandrayaan-3 (Vikram y Pragyan)': ['chandrayaan-3', 'pragyan'], 'Beresheet': ['beresheet'],
+  'Mars Pathfinder y Sojourner': ['pathfinder', 'sojourner'], 'Mars Polar Lander y Deep Space 2': ['mars polar lander', 'deep space 2'],
+  'Perseverance e Ingenuity': ['perseverance', 'ingenuity'], 'Spirit': ['spirit'], 'Opportunity': ['opportunity'], 'Phoenix': ['phoenix'],
+  'InSight': ['insight'], 'Curiosity': ['curiosity'], 'Zhurong': ['zhurong'], 'Schiaparelli': ['schiaparelli'], 'NEAR Shoemaker': ['near', 'eros'],
+  'Dawn': ['dawn'], 'Kepler': ['kepler'], 'Pioneer 10': ['pioneer 10', 'pioneer']
+};
+const fotoCache = {};
+async function fotosNasa(it, host) {
+  if (!host) return;
+  const nombre = it.name, apolo = /^Apolo (\d+)/.exec(nombre);
+  const qs = FOTO_Q[nombre] || [nombre + (apolo ? '' : ' spacecraft')].map(q => q.replace(/^Apolo/, 'Apollo'));
+  const tokens = FOTO_T[nombre] || [(apolo ? 'apollo ' + apolo[1] : nombre.toLowerCase())];
+  const pintar = (fotos) => {
+    if (!host.isConnected || !fotos.length) return;
+    host.hidden = false; host.innerHTML = '';
+    const h = document.createElement('h3'); h.textContent = tx('Fotos reales · archivo de la NASA', 'Real photos · NASA archive'); host.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'rx-fotos-grid'; host.appendChild(grid);
+    fotos.forEach(f => {
+      const fig = document.createElement('figure'), img = document.createElement('img'), cap = document.createElement('figcaption');
+      img.src = f.src; img.alt = f.t; img.loading = 'lazy'; img.onerror = () => { fig.remove(); if (!grid.children.length) host.hidden = true; };
+      const a = document.createElement('a'); a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.appendChild(img);
+      cap.textContent = f.t + (f.cr ? ' · ' + f.cr : ''); fig.append(a, cap); grid.appendChild(fig);
+    });
+  };
+  if (fotoCache[nombre]) return pintar(fotoCache[nombre]);
+  const fotos = [], vistos = new Set();
+  if (nombre === 'Luna 24') {   // foto curada del archivo LROC (NASA/GSFC/Arizona State University)
+    fotos.push({ src: 'https://lroc.im-ldi.com/news/uploads/LROCiotw/luna24_rev_fig.png', link: 'https://lroc.im-ldi.com/images/461',
+      t: tx('Luna 24 vista por la cámara LROC desde la órbita lunar (Mare Crisium)', 'Luna 24 seen by the LROC camera from lunar orbit (Mare Crisium)'), cr: 'NASA/GSFC/ASU' });
+  } else {
+    try {
+      for (const q of qs) {
+        const r = await fetch('https://images-api.nasa.gov/search?q=' + encodeURIComponent(q) + '&media_type=image&page_size=50');
+        if (!r.ok) continue;
+        const items = ((await r.json()).collection || {}).items || [];
+        items.map(item => { const d = (item.data && item.data[0]) || {};
+            const txt = ((d.title || '') + ' ' + (d.description || '') + ' ' + (d.keywords || []).join(' ')).toLowerCase();
+            const tit = (d.title || '').toLowerCase();   // vale más si el nombre está en el título
+            return { item, d, score: tokens.reduce((n, k) => n + (txt.includes(k) ? 1 : 0) + (tit.includes(k) ? 3 : 0), 0) }; })
+          .filter(x => x.score > 0).sort((a, b) => b.score - a.score)
+          .forEach(({ item, d }) => {
+            const l = (item.links || []).find(l => l.render === 'image');
+            if (!l || vistos.has(d.nasa_id) || fotos.length >= 4) return;
+            vistos.add(d.nasa_id);
+            fotos.push({ src: l.href, t: d.title || nombre, cr: d.center || 'NASA', link: 'https://images.nasa.gov/details/' + encodeURIComponent(d.nasa_id) });
+          });
+        if (fotos.length >= 4) break;
+      }
+    } catch (e) { /* sin internet o la NASA no respondió: no se muestra nada */ }
+  }
+  fotoCache[nombre] = fotos; pintar(fotos);
 }
 
 /* ==========================================================================
@@ -1253,5 +1364,5 @@ if (window.__juego) window.__alIniciar3D();
 renderMeter();
 window.setLanguage(currentLang);
 // Para probar desde la consola del navegador: Ecos.abrir('Spirit')
-window.Ecos = { jugar: id => { const st = SITES.find(s => s.n === id); cur = st ? echoFromSite(st) : id === 'luna2' ? echoLuna2() : echoDeep(DEEP.find(d => d.id === id)); overlay.hidden = false; showChallenge(); }, abrir: n => { const st = SITES.find(s => s.n === n); if (st) openEcho(echoFromSite(st)); }, archivados: () => [...archived], total: TOTAL };
+window.Ecos = { jugar: id => { const st = SITES.find(s => s.n === id); cur = st ? echoFromSite(st) : id === 'luna2' ? echoLuna2() : echoDeep(DEEP.find(d => d.id === id)); overlay.hidden = false; showChallenge(); }, abrir: n => { const st = SITES.find(s => s.n === n); if (st) openEcho(echoFromSite(st)); }, escuchar: n => { const st = SITES.find(s => s.n === n); if (st) { openEcho(echoFromSite(st)); showStory(); } }, archivados: () => [...archived], total: TOTAL };
 })();

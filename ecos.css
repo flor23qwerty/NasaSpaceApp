@@ -218,3 +218,11 @@ body.mobile-mode #e-ship{top:auto;bottom:calc(270px + env(safe-area-inset-bottom
 .term-chips button.go{background:var(--tg);color:#012508;font-weight:600}
 @media (max-width:600px){.term-out{font-size:.8rem}.intro-cap{font-size:1rem}}
 @media (prefers-reduced-motion:reduce){.term-dot{animation:none}#intro{transition:none}}
+
+/* ---------- Fotos reales de la NASA dentro del receptor ---------- */
+.rx-fotos{margin-top:16px;border-top:1px solid var(--e-line);padding-top:14px}
+.rx-fotos h3{font-family:var(--e-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--e-muted);margin:0 0 10px;font-weight:500}
+.rx-fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.rx-fotos figure{margin:0}
+.rx-fotos img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#05080f;border:1px solid var(--e-line)}
+.rx-fotos figcaption{font-size:12px;line-height:1.4;color:var(--e-muted);margin-top:6px}
