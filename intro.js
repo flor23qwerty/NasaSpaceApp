@@ -15,6 +15,9 @@
 (function () {
 'use strict';
 const KEY_NOMBRE = 'ecos3d-nombre';
+// Idioma: la intro sigue el idioma elegido en la pantalla de inicio (ES / EN)
+const EN = () => typeof currentLang !== 'undefined' && currentLang === 'en';
+const tr = (es, en) => (EN() ? en : es);
 let nombreGuardado = '';
 try { nombreGuardado = localStorage.getItem(KEY_NOMBRE) || ''; } catch (e) {}
 
@@ -82,7 +85,7 @@ function escenaCharacato(t) {
   c.fillStyle = 'rgba(255,184,77,' + (.6 + .4 * Math.sin(t * 3)) + ')'; c.fillRect(ox - 3, oy - 46, 6, 20);
   // láser hacia el cielo (la estación TLRS-3 sí lo hace con satélites)
   if (t > 1.2) { const a = Math.min(1, (t - 1.2) * 2); c.strokeStyle = 'rgba(120,255,140,' + (.55 * a) + ')'; c.lineWidth = 2; c.beginPath(); c.moveTo(ox, oy - 46); c.lineTo(ox - W * .3, 0); c.stroke(); }
-  c.fillStyle = 'rgba(236,231,218,.85)'; const et = 'Observatorio de Characato', ew = c.measureText(et).width; c.fillText(et, Math.min(ox, W - ew / 2 - 10), oy + 16); c.textAlign = 'left';
+  c.fillStyle = 'rgba(236,231,218,.85)'; const et = tr('Observatorio de Characato', 'Characato Observatory'), ew = c.measureText(et).width; c.fillText(et, Math.min(ox, W - ew / 2 - 10), oy + 16); c.textAlign = 'left';
 }
 function escenaInterior(t) {
   c.fillStyle = '#05070d'; c.fillRect(0, 0, W, H);
@@ -96,7 +99,7 @@ function escenaInterior(t) {
   c.fillStyle = '#2a2e3a'; c.fillRect(px - 70, py - 55, 140, 105); c.fillRect(px - 90, py + 50, 180, 14);
   const glow = on ? (.75 + .25 * Math.sin(t * 8)) : .05;
   c.fillStyle = 'rgba(40,255,110,' + (glow * .9) + ')'; c.fillRect(px - 58, py - 44, 116, 80);
-  if (on) { c.fillStyle = 'rgba(0,30,10,.85)'; c.font = '9px "IBM Plex Mono", monospace'; ['SEÑAL ENTRANTE', '47 FUENTES', '> _'].forEach((l, i) => c.fillText(l, px - 50, py - 26 + i * 14));
+  if (on) { c.fillStyle = 'rgba(0,30,10,.85)'; c.font = '9px "IBM Plex Mono", monospace'; [tr('SEÑAL ENTRANTE', 'INCOMING SIGNAL'), tr('47 FUENTES', '47 SOURCES'), '> _'].forEach((l, i) => c.fillText(l, px - 50, py - 26 + i * 14));
     const g = c.createRadialGradient(px, py, 10, px, py, 220); g.addColorStop(0, 'rgba(40,255,110,.25)'); g.addColorStop(1, 'rgba(40,255,110,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
 }
 function escenaTeleport(t) {
@@ -121,13 +124,15 @@ function escribir(el, txt, vel) {
 }
 
 /* ---------- Escenas 1 y 2 ---------- */
-const TEXTOS = [
-  'Arequipa. Cerro San Francisco, Characato. Desde aquí, una estación de la NASA dispara láseres a los satélites desde 1970. Esta noche, el cielo responde.',
-  'Dentro del observatorio todo está apagado… menos una computadora vieja. Se encendió sola.'
+const TEXTOS = () => [
+  tr('Arequipa. Cerro San Francisco, Characato. Desde aquí, una estación de la NASA dispara láseres a los satélites desde 1970. Esta noche, el cielo responde.',
+     'Arequipa, Peru. San Francisco Hill, Characato. Since 1970, a NASA station here has fired lasers at satellites. Tonight, the sky answers.'),
+  tr('Dentro del observatorio todo está apagado… menos una computadora vieja. Se encendió sola.',
+     'Inside the observatory everything is dark… except an old computer. It turned on by itself.')
 ];
 async function irEscena(n) {
   escena = n; t0 = performance.now(); next.hidden = true; cap.hidden = false;
-  if (n < 2) { await escribir(cap, TEXTOS[n]); next.hidden = false; next.focus(); }
+  if (n < 2) { await escribir(cap, TEXTOS()[n]); next.hidden = false; next.focus(); }
   else if (n === 2) { cap.hidden = true; abrirTerminal(); }
 }
 next.onclick = () => irEscena(escena + 1);
@@ -138,31 +143,35 @@ function linea(txt, cls) { const p = document.createElement('div'); p.className 
 async function decir(lineas, cls) { ocupado = true; for (const l of lineas) { const p = linea('', cls); await escribir(p, l, 14); out.scrollTop = out.scrollHeight; } ocupado = false; }
 const contar = () => { const luna = SITES.filter(s => s.b === 'm').length + 1, marte = SITES.filter(s => s.b === 'M').length; return { luna, marte, lejos: 4, total: luna + marte + 4 }; };
 const CMD = {
-  ayuda: () => decir(['Comandos disponibles:', '  escanear     buscar señales en el sistema solar', '  observatorio información de este lugar', '  señal        escuchar una de las señales', '  nave         ver la nave asignada', '  eve          conocer a tu asistente', '  limpiar      borrar la pantalla', '  aceptar      aceptar la misión y teletransportarte']),
-  escanear: async () => { const k = contar(); await decir(['Escaneando…', '[██████████████████] 100 %', 'Luna ............ ' + k.luna + ' señales', 'Marte ........... ' + k.marte + ' señales', 'Espacio profundo  ' + k.lejos + ' señales', 'TOTAL: ' + k.total + ' máquinas abandonadas. Ninguna responde.', 'Son sondas, rovers y módulos que la humanidad dejó atrás desde 1959.']); },
-  observatorio: () => decir(['OBSERVATORIO DE CHARACATO · Universidad Nacional de San Agustín', 'Cerro San Francisco, Characato, Arequipa · ~2.448 m de altitud', 'Aloja la estación láser TLRS-3 de la NASA.', 'Mide la distancia a satélites disparando pulsos de láser y cronometrando', 'cuánto tarda la luz en volver. Aquí se hace desde 1970.', 'Es la misma idea con la que se mide la distancia a la Luna', 'usando los espejos que dejó el Apolo 15. (Lo probarás en el juego.)']),
-  'señal': () => decir(['Sintonizando la señal más lejana…', '…▒▒░ soy Pioneer 10 ░▒▒…', '…▒ crucé el cinturón de asteroides en 1972… ▒░…', '…░ mi última señal llegó en 2003… sigo viajando hacia Aldebarán ▒…', '[señal perdida]', 'Hay 46 señales más esperando a alguien que las escuche.'], 'eco'),
-  nave: () => decir(['NAVE ECO-1 · posada en su plataforma de lanzamiento, en la Tierra', 'Tripulación: 1 operador + asistente EVE', 'Equipo: antena de espacio profundo, receptor de ecos, módulo de aterrizaje', 'Estado: esperando operador…']),
-  eve: () => decir(['EVE · asistente cósmica de la ECO-1', '"Hola, ' + nombre + '. Yo te daré datos y te guiaré hasta cada máquina.', ' Tú solo tienes que escucharlas."']),
+  ayuda: () => decir(EN() ? ['Available commands:', '  scan         search for signals in the solar system', '  observatory  about this place', '  signal       listen to one of the signals', '  ship         see your assigned ship', '  eve          meet your assistant', '  clear        clear the screen', '  accept       accept the mission and teleport']
+    : ['Comandos disponibles:', '  escanear     buscar señales en el sistema solar', '  observatorio información de este lugar', '  señal        escuchar una de las señales', '  nave         ver la nave asignada', '  eve          conocer a tu asistente', '  limpiar      borrar la pantalla', '  aceptar      aceptar la misión y teletransportarte']),
+  escanear: async () => { const k = contar(); await decir(EN() ? ['Scanning…', '[██████████████████] 100 %', 'Moon ............ ' + k.luna + ' signals', 'Mars ............ ' + k.marte + ' signals', 'Deep space ...... ' + k.lejos + ' signals', 'TOTAL: ' + k.total + ' abandoned machines. None of them answer.', 'They are probes, rovers and landers humanity has left behind since 1959.']
+    : ['Escaneando…', '[██████████████████] 100 %', 'Luna ............ ' + k.luna + ' señales', 'Marte ........... ' + k.marte + ' señales', 'Espacio profundo  ' + k.lejos + ' señales', 'TOTAL: ' + k.total + ' máquinas abandonadas. Ninguna responde.', 'Son sondas, rovers y módulos que la humanidad dejó atrás desde 1959.']); },
+  observatorio: () => decir(EN() ? ['CHARACATO OBSERVATORY · National University of San Agustín (UNSA)', 'San Francisco Hill, Characato, Arequipa, Peru · ~2,448 m above sea level', 'Home of NASA\'s TLRS-3 laser station.', 'It measures the distance to satellites by firing laser pulses and timing', 'how long the light takes to come back. It has done so since 1970.', 'It is the same idea used to measure the distance to the Moon', 'with the mirrors left by Apollo 15. (You will try it in the game.)']
+    : ['OBSERVATORIO DE CHARACATO · Universidad Nacional de San Agustín', 'Cerro San Francisco, Characato, Arequipa · ~2.448 m de altitud', 'Aloja la estación láser TLRS-3 de la NASA.', 'Mide la distancia a satélites disparando pulsos de láser y cronometrando', 'cuánto tarda la luz en volver. Aquí se hace desde 1970.', 'Es la misma idea con la que se mide la distancia a la Luna', 'usando los espejos que dejó el Apolo 15. (Lo probarás en el juego.)']),
+  'señal': () => decir(EN() ? ['Tuning in to the farthest signal…', '…▒▒░ I am Pioneer 10 ░▒▒…', '…▒ I crossed the asteroid belt in 1972… ▒░…', '…░ my last signal arrived in 2003… I am still travelling toward Aldebaran ▒…', '[signal lost]', 'There are 46 more signals waiting for someone to listen.'] : ['Sintonizando la señal más lejana…', '…▒▒░ soy Pioneer 10 ░▒▒…', '…▒ crucé el cinturón de asteroides en 1972… ▒░…', '…░ mi última señal llegó en 2003… sigo viajando hacia Aldebarán ▒…', '[señal perdida]', 'Hay 46 señales más esperando a alguien que las escuche.'], 'eco'),
+  nave: () => decir(EN() ? ['SHIP ECO-1 · resting on its launch pad, on Earth', 'Crew: 1 operator + assistant EVE', 'Equipment: deep space antenna, echo receiver, landing module', 'Status: waiting for an operator…'] : ['NAVE ECO-1 · posada en su plataforma de lanzamiento, en la Tierra', 'Tripulación: 1 operador + asistente EVE', 'Equipo: antena de espacio profundo, receptor de ecos, módulo de aterrizaje', 'Estado: esperando operador…']),
+  eve: () => decir(EN() ? ['EVE · cosmic assistant of the ECO-1', '"Hi, ' + nombre + '. I will give you facts and guide you to every machine.', ' You only have to listen to them."'] : ['EVE · asistente cósmica de la ECO-1', '"Hola, ' + nombre + '. Yo te daré datos y te guiaré hasta cada máquina.', ' Tú solo tienes que escucharlas."']),
   limpiar: () => { out.innerHTML = ''; return Promise.resolve(); },
-  aceptar: async () => { fase = 'fin'; input.disabled = true; chips.innerHTML = ''; await decir(['Operador ' + nombre.toUpperCase() + ': misión aceptada.', 'Destino: plataforma de la nave ECO-1.', 'Iniciando teletransporte…']);
+  aceptar: async () => { fase = 'fin'; input.disabled = true; chips.innerHTML = ''; await decir(EN() ? ['Operator ' + nombre.toUpperCase() + ': mission accepted.', 'Destination: ECO-1 launch pad.', 'Starting teleport…'] : ['Operador ' + nombre.toUpperCase() + ': misión aceptada.', 'Destino: plataforma de la nave ECO-1.', 'Iniciando teletransporte…']);
     const bar = linea('', 'ok'); for (let p = 0; p <= 100; p += 5) { bar.textContent = '[' + '█'.repeat(p / 5) + '░'.repeat(20 - p / 5) + '] ' + p + ' %'; await new Promise(r => setTimeout(r, reduce ? 0 : 60)); }
     for (const n of ['3', '2', '1']) { linea(n + '…', 'ok'); await new Promise(r => setTimeout(r, reduce ? 0 : 450)); }
     teletransporte(); }
 };
-const ALIAS = { help: 'ayuda', '?': 'ayuda', scan: 'escanear', senal: 'señal', signal: 'señal', ship: 'nave', clear: 'limpiar', cls: 'limpiar', accept: 'aceptar', si: 'aceptar', 'sí': 'aceptar' };
+const ALIAS = { help: 'ayuda', '?': 'ayuda', scan: 'escanear', senal: 'señal', signal: 'señal', ship: 'nave', clear: 'limpiar', cls: 'limpiar', accept: 'aceptar', si: 'aceptar', 'sí': 'aceptar', observatory: 'observatorio', yes: 'aceptar' };
+const NOMBRE_EN = { ayuda: 'help', escanear: 'scan', observatorio: 'observatory', 'señal': 'signal', nave: 'ship', eve: 'eve', aceptar: 'accept' };
 function ponerChips() {
   chips.innerHTML = '';
-  ['ayuda', 'escanear', 'observatorio', 'señal', 'nave', 'eve', 'aceptar'].forEach(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = k; if (k === 'aceptar') b.className = 'go'; b.onclick = () => ejecutar(k); chips.appendChild(b); });
+  ['ayuda', 'escanear', 'observatorio', 'señal', 'nave', 'eve', 'aceptar'].forEach(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = EN() ? NOMBRE_EN[k] : k; if (k === 'aceptar') b.className = 'go'; b.onclick = () => ejecutar(k); chips.appendChild(b); });
 }
 /* El nombre del jugador deletreado en Lengua de Señas Peruana (imágenes de lsp/) */
 async function nombreEnSenas(n) {
   const L = window.LSP_LETRAS || {};
   const letras = (n.toLowerCase().match(/ll|rr|[\s\S]/g) || []).map(ch => ch.length === 2 ? ch : ch === 'ñ' ? 'enie' : ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   if (!letras.some(k => L[k])) return;
-  await decir(['Así se deletrea tu nombre en Lengua de Señas Peruana:'], 'tip');
+  await decir([tr('Así se deletrea tu nombre en Lengua de Señas Peruana:', 'This is how your name is fingerspelled in Peruvian Sign Language:')], 'tip');
   const fila = document.createElement('div'); fila.className = 'tl term-lsp'; fila.setAttribute('role', 'img');
-  fila.setAttribute('aria-label', n + ', deletreado en Lengua de Señas Peruana');
+  fila.setAttribute('aria-label', n + tr(', deletreado en Lengua de Señas Peruana', ', fingerspelled in Peruvian Sign Language'));
   out.appendChild(fila);
   for (const k of letras) {
     if (/\s/.test(k)) { if (fila.lastChild && fila.lastChild.className !== 'esp') { const e = document.createElement('span'); e.className = 'esp'; fila.appendChild(e); } continue; }
@@ -181,23 +190,24 @@ async function ejecutar(raw) {
     nombre = v.replace(/[<>]/g, '').slice(0, 16);
     try { localStorage.setItem(KEY_NOMBRE, nombre); } catch (e) {}
     fase = 'cmd'; ov.querySelector('#term-prompt').textContent = nombre.toLowerCase().replace(/\s+/g, '') + '@characato:~$';
-    await decir(['Operador registrado: ' + nombre.toUpperCase()]);
+    await decir([tr('Operador registrado: ', 'Operator registered: ') + nombre.toUpperCase()]);
     await nombreEnSenas(nombre);
-    await decir(['Hola, ' + nombre + '. Este observatorio recibió ' + contar().total + ' señales del espacio y necesita a alguien que las escuche.', 'Explora con comandos. Escribe "ayuda" para verlos, o "aceptar" cuando estés listo.']);
-    ponerChips(); input.setAttribute('aria-label', 'Escribe un comando'); return;
+    await decir(EN() ? ['Hi, ' + nombre + '. This observatory received ' + contar().total + ' signals from space and needs someone to listen to them.', 'Explore with commands. Type "help" to see them, or "accept" when you are ready.']
+      : ['Hola, ' + nombre + '. Este observatorio recibió ' + contar().total + ' señales del espacio y necesita a alguien que las escuche.', 'Explora con comandos. Escribe "ayuda" para verlos, o "aceptar" cuando estés listo.']);
+    ponerChips(); input.setAttribute('aria-label', tr('Escribe un comando', 'Type a command')); return;
   }
   const k = ALIAS[v.toLowerCase()] || v.toLowerCase();
-  if (CMD[k]) { usados.add(k); await CMD[k](); if (usados.size === 3 && k !== 'aceptar' && fase !== 'fin') await decir(['(Cuando quieras, escribe "aceptar" para ir a la nave.)'], 'tip'); }
-  else await decir(['Comando no reconocido: "' + v + '". Escribe "ayuda".'], 'err');
+  if (CMD[k]) { usados.add(k); await CMD[k](); if (usados.size === 3 && k !== 'aceptar' && fase !== 'fin') await decir([tr('(Cuando quieras, escribe "aceptar" para ir a la nave.)', '(Whenever you want, type "accept" to go to the ship.)')], 'tip'); }
+  else await decir([tr('Comando no reconocido: "' + v + '". Escribe "ayuda".', 'Unknown command: "' + v + '". Type "help".')], 'err');
   if (fase !== 'fin') input.focus();
 }
 form.addEventListener('submit', e => { e.preventDefault(); const v = input.value; input.value = ''; ejecutar(v); });
 async function abrirTerminal() {
   term.hidden = false; out.innerHTML = ''; fase = 'nombre'; usados.clear(); input.disabled = false; chips.innerHTML = '';
   ov.querySelector('#term-prompt').textContent = '>';
-  await decir(['Iniciando SISTEMA ECO v1.969…', 'Antena de espacio profundo ........ OK', 'Receptor de ecos .................. OK', '> Escaneando el sistema solar…', '> ' + contar().total + ' señales detectadas. Ninguna responde.', '> Son máquinas que la humanidad dejó en la Luna, en Marte y más allá.', '  Sus historias se están perdiendo.', '', '> Se necesita un operador. Escribe tu nombre:']);
-  if (nombreGuardado) { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Soy ' + nombreGuardado; b.onclick = () => ejecutar(nombreGuardado); chips.appendChild(b); }
-  input.setAttribute('aria-label', 'Escribe tu nombre'); input.focus();
+  await decir(EN() ? ['Starting ECO SYSTEM v1.969…', 'Deep space antenna ................ OK', 'Echo receiver ..................... OK', '> Scanning the solar system…', '> ' + contar().total + ' signals detected. None of them answer.', '> They are machines humanity left on the Moon, on Mars and beyond.', '  Their stories are being lost.', '', '> An operator is needed. Type your name:'] : ['Iniciando SISTEMA ECO v1.969…', 'Antena de espacio profundo ........ OK', 'Receptor de ecos .................. OK', '> Escaneando el sistema solar…', '> ' + contar().total + ' señales detectadas. Ninguna responde.', '> Son máquinas que la humanidad dejó en la Luna, en Marte y más allá.', '  Sus historias se están perdiendo.', '', '> Se necesita un operador. Escribe tu nombre:']);
+  if (nombreGuardado) { const b = document.createElement('button'); b.type = 'button'; b.textContent = tr('Soy ', 'I am ') + nombreGuardado; b.onclick = () => ejecutar(nombreGuardado); chips.appendChild(b); }
+  input.setAttribute('aria-label', tr('Escribe tu nombre', 'Type your name')); input.focus();
 }
 
 /* ---------- Escena 4: teletransporte y entrada al juego ---------- */
@@ -207,7 +217,7 @@ function teletransporte() {
   setTimeout(terminar, reduce ? 300 : 2900);
 }
 function terminar() {
-  const n = nombre || nombreGuardado || 'operador';
+  const n = nombre || nombreGuardado || tr('operador', 'operator');
   window.__nombreOperador = n;
   i18n.es.eveWelcome = '¡Hola, ' + n + '! El teletransporte te dejó en la Tierra, junto a la ECO-1. Camina hasta la nave (W A S D) y pulsa F para subir. Luego abre el archivo (arriba a la derecha) y elige una máquina: aterrizaremos a su lado.';
   i18n.en.eveWelcome = 'Hi, ' + n + '! The teleporter dropped you on Earth, next to the ECO-1. Walk to the ship (W A S D) and press F to board. Then open the archive (top right) and pick a machine: we will land next to it.';
@@ -222,6 +232,11 @@ const _init = window.initExperience;
 window.initExperience = function () {
   try { bgAudio.volume = 0.6; bgAudio.play().catch(() => {}); } catch (e) {}   // la música empieza con el clic
   alFinal = _init;
+  // Textos fijos de la intro en el idioma elegido
+  next.textContent = tr('Continuar ▸', 'Continue ▸');
+  ov.querySelector('#intro-skip').textContent = tr('Saltar intro', 'Skip intro');
+  term.setAttribute('aria-label', tr('Terminal del observatorio', 'Observatory terminal'));
+  ov.querySelector('.term-bar span').textContent = tr('OBSERVATORIO DE CHARACATO · SISTEMA ECO v1.969', 'CHARACATO OBSERVATORY · ECO SYSTEM v1.969');
   ov.hidden = false; ajustar(); t0 = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   term.hidden = true; irEscena(0);
 };
